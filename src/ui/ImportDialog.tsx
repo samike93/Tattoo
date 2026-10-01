@@ -190,7 +190,7 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
     setWorking(true);
     const scale = original.width / preview.width;
     // Despeckle is relative to image area, so it carries over; feather is in pixels, so scale it.
-    const r = await removeBackgroundAsync(canvasToImage(original), { ...opts, feather: opts.feather * scale });
+    const r = await removeBackgroundAsync(canvasToImage(original), { ...opts, feather: opts.feather * scale }, 'full');
     setWorking(false);
     return imageToCanvas(r.image);
   };

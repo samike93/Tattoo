@@ -7,8 +7,9 @@ import { removeBackground, type BgOptions, type BgResult, type RGBAImage } from 
  */
 let worker: Worker | null | undefined;
 let nextId = 1;
-let latest = 0;
-const pending = new Map<number, { resolve: (r: BgResult) => void; reject: (e: Error) => void }>();
+/** Latest request id per channel: previews supersede previews, never the final full-resolution run. */
+const latest = new Map<string, number>();
+const pending = new Map<number, { channel: string; resolve: (r: BgResult) => void; reject: (e: Error) => void }>();
 
 function getWorker(): Worker | null {
   if (worker !== undefined) return worker;
@@ -34,23 +35,24 @@ function getWorker(): Worker | null {
 
 export class Superseded extends Error {}
 
-export function removeBackgroundAsync(image: RGBAImage, options: Partial<BgOptions>): Promise<BgResult> {
+export function removeBackgroundAsync(image: RGBAImage, options: Partial<BgOptions>, channel = 'preview'): Promise<BgResult> {
   const id = nextId++;
-  latest = id;
+  latest.set(channel, id);
   const w = getWorker();
   if (!w) {
     return new Promise((resolve) => setTimeout(() => resolve(removeBackground(image, options)), 0));
   }
-  // Older requests still pending will never be used: reject them now.
+  // Older requests on this channel will never be used: reject them now.
   for (const [pid, p] of pending) {
-    if (pid < id) {
+    if (pid < id && p.channel === channel) {
       p.reject(new Superseded());
       pending.delete(pid);
     }
   }
   return new Promise((resolve, reject) => {
     pending.set(id, {
-      resolve: (r) => (id === latest ? resolve(r) : reject(new Superseded())),
+      channel,
+      resolve: (r) => (id === latest.get(channel) ? resolve(r) : reject(new Superseded())),
       reject,
     });
     const copy = new Uint8ClampedArray(image.data); // the original stays usable for the next run

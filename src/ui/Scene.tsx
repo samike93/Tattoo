@@ -83,7 +83,15 @@ export function Scene() {
     return b;
   }, [raw, bodyId, clientHeight, bodyWeight, bodyMuscle]);
 
-  useEffect(() => () => (body?.geometry as BvhGeometry | undefined)?.disposeBoundsTree(), [body]);
+  // Every reshape (height, build, muscle) builds a new geometry: free the old one's BVH and GPU
+  // buffers, or dragging a body slider leaks GPU memory (fatal on iPads).
+  useEffect(
+    () => () => {
+      (body?.geometry as BvhGeometry | undefined)?.disposeBoundsTree();
+      body?.geometry.dispose();
+    },
+    [body],
+  );
 
   return (
     <>
@@ -203,6 +211,7 @@ function BoxProjector() {
 /** Hooks for automated tests and console debugging: window.tattoo.project(p) and .bodyHeight(). */
 function TestHooks({ body }: { body: LoadedBody | null }) {
   const camera = useThree((s) => s.camera);
+  const gl = useThree((s) => s.gl);
   const controls = useThree((s) => s.controls) as OrbitControls | null;
   const dom = useThree((s) => s.gl.domElement);
   useEffect(() => {
@@ -218,11 +227,12 @@ function TestHooks({ body }: { body: LoadedBody | null }) {
       controls?.target.set(...target);
       controls?.update();
     };
+    t.gpuMemory = () => ({ ...gl.info.memory });
     t.bodyHeight = () => {
       const bb = body?.geometry.boundingBox;
       return bb ? bb.max.y - bb.min.y : NaN;
     };
-  }, [camera, dom, body, controls]);
+  }, [camera, dom, body, controls, gl]);
   return null;
 }
 

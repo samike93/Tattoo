@@ -175,6 +175,15 @@ try {
   const h = await page.evaluate(() => window.tattoo.bodyHeight());
   check('client height 1.60 m gives a 1.60 m body', Math.abs(h - 1.6) < 0.002, `${h.toFixed(4)} m`);
 
+  // Reshaping the body must not leak GPU memory (each reshape builds a new geometry).
+  const geoBefore = (await page.evaluate(() => window.tattoo.gpuMemory())).geometries;
+  for (const hm of [1.62, 1.7, 1.78, 1.86, 1.66, 1.74]) {
+    await page.evaluate((v) => window.tattoo.set({ clientHeight: v }), hm);
+    await settle(500);
+  }
+  const geoAfter = (await page.evaluate(() => window.tattoo.gpuMemory())).geometries;
+  check('reshaping the body 6 times does not pile up GPU geometries', geoAfter <= geoBefore + 1, `${geoBefore} -> ${geoAfter}`);
+
   // Import: PNG line art through background removal.
   const png = await page.evaluate(() => {
     const c = document.createElement('canvas');
@@ -205,7 +214,10 @@ try {
   check('line art on paper auto-selects line art mode', /Line art/.test(modeLabel), modeLabel);
   await page.screenshot({ path: `${OUT}/e2e-bg-removal.png` });
   await page.getByRole('button', { name: 'Use design' }).click();
-  await page.waitForSelector('.modal', { state: 'detached', timeout: 20000 });
+  await page.waitForSelector('.modal', { state: 'detached', timeout: 20000 }).catch(async (e) => {
+    console.log('dialog error:', await page.locator('.modal .error').allInnerTexts(), JSON.stringify((await state()).errors));
+    throw e;
+  });
   await settle(1500);
   s = await state();
   check('imported design is placed on the body', s.design.kind === 'image' && s.design.name === 'rose.png' && s.status === 'Ready', s.design.name);

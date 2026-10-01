@@ -2,6 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { exportImage, EXPORT_LONG_SIDE, type ExportView } from './Exporter';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
+import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
 
 const SKIN_TONES = ['#f4d8c4', '#e9bf9f', '#d9a57e', '#b47b52', '#8a5636', '#5c3720', '#3b2214'];
@@ -15,7 +16,9 @@ const METHODS: { id: Method; label: string; hint: string }[] = [
 const METHOD_NAMES = { expmap: 'Surface wrap', cylinder: 'Cylindrical wrap', decal: 'Flat projection' };
 
 export function Panel() {
-  const s = useApp();
+  // Everything except fast-changing readouts (FPS/timings tick every second), so the panel does not
+  // re-render for nothing. Metrics has its own subscription below.
+  const s = useApp(useShallow(({ timings, errors, status, metrics, metricsNote, focus, focusOpposite, ...rest }) => rest));
   const ft = Math.floor(s.clientHeight / 0.3048);
   const inch = Math.round((s.clientHeight / INCH) % 12);
 
