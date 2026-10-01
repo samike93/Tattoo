@@ -70,13 +70,13 @@ export function prepareBody(raw: RawBody, shape: Partial<ShapeParams> = {}): Loa
   let skeleton: Skeleton;
   let scale = 1;
   let heightPhenotype: number | undefined;
-  if (raw.skeleton.shapes && morphs.length === raw.skeleton.shapes.corners.length) {
+  if (raw.skeleton.shapes && morphs.length >= raw.skeleton.shapes.corners.length) {
     const r = applyShape(
       raw.geometry.getAttribute('position').array as ArrayLike<number>,
       morphs.map((m) => m.array as ArrayLike<number>),
       raw.skeleton,
       raw.skeleton.shapes,
-      { heightM: shape.heightM, weight: shape.weight ?? 0.5, muscle: shape.muscle ?? 0.5 },
+      { heightM: shape.heightM, weight: shape.weight ?? 0.5, muscle: shape.muscle ?? 0.5, local: shape.local },
     );
     geometry.setAttribute('position', new BufferAttribute(r.positions, 3));
     skeleton = r.skeleton;

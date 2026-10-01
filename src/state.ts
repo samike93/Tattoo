@@ -40,6 +40,8 @@ export interface AppState {
   /** Anny weight and muscle, 0..1 (0.5 = average). */
   bodyWeight: number;
   bodyMuscle: number;
+  /** Body-shape controls (belly, bust, thighs...) by id, each -1..1, 0 = average. */
+  bodyLocal: Record<string, number>;
   skinTone: string;
   method: Method;
   limbId: string;
@@ -102,6 +104,7 @@ export const useApp = create<AppState>((set) => ({
   clientHeight: DEFAULT_HEIGHTS.male,
   bodyWeight: 0.5,
   bodyMuscle: 0.5,
+  bodyLocal: {},
   skinTone: '#d9a57e',
   method: 'auto',
   limbId: 'forearm.L',
@@ -164,6 +167,8 @@ const LINK_KEYS = [
 export function stateToHash(s: AppState): string {
   const p = new URLSearchParams();
   for (const k of LINK_KEYS) p.set(k, String(s[k]));
+  const shape = Object.entries(s.bodyLocal).filter(([, v]) => v !== 0);
+  if (shape.length) p.set('shape', shape.map(([k, v]) => `${k}:${v}`).join(','));
   if (s.placement) p.set('at', [...s.placement.point, ...s.placement.normal].map((v) => v.toFixed(5)).join(','));
   return p.toString();
 }
@@ -178,6 +183,15 @@ export function hashToState(hash: string): Partial<AppState> {
     const d = defaults[k];
     out[k] = typeof d === 'number' ? Number(v) : typeof d === 'boolean' ? v === 'true' : v;
     if (typeof d === 'number' && !Number.isFinite(out[k] as number)) delete out[k];
+  }
+  const shape = p.get('shape');
+  if (shape) {
+    const local: Record<string, number> = {};
+    for (const part of shape.split(',')) {
+      const [k, v] = part.split(':');
+      if (k && Number.isFinite(Number(v))) local[k] = Number(v);
+    }
+    out.bodyLocal = local;
   }
   const at = p.get('at')?.split(',').map(Number);
   if (at && at.length === 6 && at.every(Number.isFinite)) {

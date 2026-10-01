@@ -23,10 +23,27 @@ export interface ShapeCorner {
   heads: Vec3[];
 }
 
+/**
+ * Slider range per control. Thigh gap stops at -0.7: at -1 combined with the heaviest build and
+ * maximum thighs and hips, the inner thighs would overlap by ~5 mm (tested in shape.test.ts).
+ */
+export const LOCAL_RANGE: Record<string, [number, number]> = { thighGap: [-0.7, 1] };
+export const localRange = (id: string): [number, number] => LOCAL_RANGE[id] ?? [-1, 1];
+
+/** A body-shape control (belly, bust, thighs...): two sparse morph targets, at +1 and -1. */
+export interface LocalControl {
+  id: string;
+  label: string;
+  plus: { target: number; heads: Vec3[] };
+  minus: { target: number; heads: Vec3[] };
+}
+
 export interface ShapeData {
   grid: ShapeGrid;
   base: { height: number; weight: number; muscle: number };
   corners: ShapeCorner[];
+  /** Local body-shape controls (absent in older exports). */
+  local?: LocalControl[];
 }
 
 export interface ShapeParams {
@@ -36,6 +53,8 @@ export interface ShapeParams {
   weight: number;
   /** 0 = soft, 0.5 = average, 1 = muscular. */
   muscle: number;
+  /** Body-shape controls by id, each in [-1, 1] (0 = as Anny's average). */
+  local?: Record<string, number>;
 }
 
 /** Piecewise-linear interpolation weights of x over sorted anchors: [[index, weight], ...]. */
@@ -112,12 +131,29 @@ export interface ShapeResult {
   heightM: number;
 }
 
+/**
+ * Weights for every morph target: the 18 corners (trilinear in height/weight/muscle) followed by the
+ * local controls (weight |s| on the +1 or -1 target). Exact: Anny's local changes are linear on each
+ * side of 0 and independent of the phenotype.
+ */
+export function allWeights(shape: ShapeData, targetCount: number, h: number, p: ShapeParams): Float64Array {
+  const w = new Float64Array(targetCount);
+  w.set(cornerWeights(shape.grid, h, p.weight, p.muscle));
+  for (const c of shape.local ?? []) {
+    const [lo, hi] = localRange(c.id);
+    const v = Math.min(Math.max(p.local?.[c.id] ?? 0, lo), hi);
+    if (v > 0 && c.plus.target < targetCount) w[c.plus.target] = v;
+    if (v < 0 && c.minus.target < targetCount) w[c.minus.target] = -v;
+  }
+  return w;
+}
+
 export function applyShape(base: ArrayLike<number>, deltas: ArrayLike<number>[], skeleton: Skeleton, shape: ShapeData, p: ShapeParams): ShapeResult {
   const scratch = new Float32Array(base.length);
   let h = shape.base.height;
   if (p.heightM !== undefined) {
     // Height grows monotonically with the height phenotype: bisect.
-    const at = (x: number) => meshHeight(base, deltas, cornerWeights(shape.grid, x, p.weight, p.muscle), scratch);
+    const at = (x: number) => meshHeight(base, deltas, allWeights(shape, deltas.length, x, p), scratch);
     let lo = shape.grid.height[0], hi = shape.grid.height[shape.grid.height.length - 1];
     if (p.heightM <= at(lo)) h = lo;
     else if (p.heightM >= at(hi)) h = hi;
@@ -130,7 +166,7 @@ export function applyShape(base: ArrayLike<number>, deltas: ArrayLike<number>[],
       h = (lo + hi) / 2;
     }
   }
-  const weights = cornerWeights(shape.grid, h, p.weight, p.muscle);
+  const weights = allWeights(shape, deltas.length, h, p);
   const positions = blendPositions(base, deltas, weights, new Float32Array(base.length));
   let floor = Infinity, top = -Infinity;
   for (let i = 1; i < positions.length; i += 3) {
@@ -144,7 +180,14 @@ export function applyShape(base: ArrayLike<number>, deltas: ArrayLike<number>[],
     positions[i + 1] = (positions[i + 1] - floor) * scale;
     positions[i + 2] *= scale;
   }
-  const heads = blendHeads(shape, weights);
+  const heads = blendHeads(shape, weights.subarray(0, shape.corners.length));
+  for (const c of shape.local ?? []) {
+    for (const t of [c.plus, c.minus]) {
+      const wk = weights[t.target] ?? 0;
+      if (!wk) continue;
+      for (let b = 0; b < heads.length; b++) for (let j = 0; j < 3; j++) heads[b][j] += wk * t.heads[b][j];
+    }
+  }
   return {
     positions,
     heightPhenotype: h,

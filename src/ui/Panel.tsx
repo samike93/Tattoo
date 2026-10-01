@@ -1,9 +1,23 @@
 import { useState, type ReactNode } from 'react';
 import { exportImage, EXPORT_LONG_SIDE, type ExportView } from './Exporter';
+import { localRange } from '../body/shape';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
+
+/** Body-shape controls (ids match tools/export_bodies.py LOCAL_CONTROLS). Neutral wording on purpose. */
+const SHAPE_CONTROLS: { id: string; label: string; less: string; more: string }[] = [
+  { id: 'belly', label: 'Belly', less: 'Flatter', more: 'Rounder' },
+  { id: 'bust', label: 'Bust', less: 'Smaller', more: 'Fuller' },
+  { id: 'bustLift', label: 'Bust lift', less: 'Lower', more: 'Higher' },
+  { id: 'hips', label: 'Hips', less: 'Narrower', more: 'Wider' },
+  { id: 'buttocks', label: 'Buttocks', less: 'Flatter', more: 'Fuller' },
+  { id: 'thighs', label: 'Thighs', less: 'Slimmer', more: 'Thicker' },
+  { id: 'thighGap', label: 'Thigh gap', less: 'Touching', more: 'Wider gap' },
+  { id: 'upperArms', label: 'Upper arms', less: 'Slimmer', more: 'Fuller' },
+  { id: 'calves', label: 'Calves', less: 'Slimmer', more: 'Fuller' },
+];
 
 const SKIN_TONES = ['#f4d8c4', '#e9bf9f', '#d9a57e', '#b47b52', '#8a5636', '#5c3720', '#3b2214'];
 
@@ -51,6 +65,28 @@ export function Panel() {
         </label>
         <Slider label="Build" value={s.bodyWeight} min={0} max={1} step={0.05} fmt={(v) => (v < 0.35 ? 'Slim' : v > 0.65 ? 'Heavy' : 'Average')} onChange={(v) => s.set({ bodyWeight: v })} />
         <Slider label="Muscle" value={s.bodyMuscle} min={0} max={1} step={0.05} fmt={(v) => (v < 0.35 ? 'Soft' : v > 0.65 ? 'Muscular' : 'Average')} onChange={(v) => s.set({ bodyMuscle: v })} />
+        <details className="shape">
+          <summary>Body shape{Object.values(s.bodyLocal).some((v) => v) ? ' (adjusted)' : ''}</summary>
+          {SHAPE_CONTROLS.map((c) => {
+            const [lo, hi] = localRange(c.id);
+            const v = s.bodyLocal[c.id] ?? 0;
+            return (
+              <Slider
+                key={c.id}
+                label={c.label}
+                value={v}
+                min={lo}
+                max={hi}
+                step={0.05}
+                fmt={(x) => (Math.abs(x) < 0.05 ? 'Average' : `${x < 0 ? c.less : c.more} ${Math.round(Math.abs(x) * 100)}%`)}
+                onChange={(x) => s.set({ bodyLocal: { ...s.bodyLocal, [c.id]: x } })}
+              />
+            );
+          })}
+          <button onClick={() => s.set({ bodyLocal: {} })} disabled={!Object.values(s.bodyLocal).some((v) => v)}>
+            Reset shape
+          </button>
+        </details>
         <div className="swatches" role="radiogroup" aria-label="Skin tone">
           {SKIN_TONES.map((c) => (
             <button key={c} aria-label={`Skin tone ${c}`} className={s.skinTone === c ? 'on' : ''} style={{ background: c }} onClick={() => s.set({ skinTone: c })} />

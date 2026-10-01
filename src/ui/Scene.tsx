@@ -52,6 +52,7 @@ export function Scene() {
   const clientHeight = useDeferredValue(useApp((s) => s.clientHeight));
   const bodyWeight = useDeferredValue(useApp((s) => s.bodyWeight));
   const bodyMuscle = useDeferredValue(useApp((s) => s.bodyMuscle));
+  const bodyLocal = useDeferredValue(useApp((s) => s.bodyLocal));
   const [raw, setRaw] = useState<RawBody | null>(null);
 
   useEffect(() => {
@@ -77,11 +78,11 @@ export function Scene() {
   const body = useMemo(() => {
     if (!raw || raw.id !== bodyId) return null;
     const t0 = performance.now();
-    const b = prepareBody(raw, { heightM: clientHeight, weight: bodyWeight, muscle: bodyMuscle });
+    const b = prepareBody(raw, { heightM: clientHeight, weight: bodyWeight, muscle: bodyMuscle, local: bodyLocal });
     (b.geometry as BvhGeometry).computeBoundsTree();
     useApp.getState().setTiming('bodyPrepareMs', performance.now() - t0);
     return b;
-  }, [raw, bodyId, clientHeight, bodyWeight, bodyMuscle]);
+  }, [raw, bodyId, clientHeight, bodyWeight, bodyMuscle, bodyLocal]);
 
   // Every reshape (height, build, muscle) builds a new geometry: free the old one's BVH and GPU
   // buffers, or dragging a body slider leaks GPU memory (fatal on iPads).

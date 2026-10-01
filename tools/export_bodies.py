@@ -37,6 +37,26 @@ import anny
 
 DROP_PARTS = {"eye_back.L", "eye_back.R", "eye_cavity.L", "eye_cavity.R", "mouth_cavity", "tongue"}
 
+# Body-shape controls built from Anny's "local changes". Each control mixes a few Anny targets; at
+# value s in [-1, 1] every target gets coefficient * s. Anny's local changes are exactly linear on
+# each side of 0 and independent of height/weight/muscle (checked: 0.00 mm), so each control is
+# stored as two sparse morph targets (s = +1 and s = -1) that the app adds on top of the corners.
+LOCAL_CONTROLS = [
+    ("belly", "Belly", {"stomach-pregnant-incr": 0.8, "measure-waist-circ-incr": 0.6}),
+    ("bust", "Bust size", {"measure-bust-circ-incr": 1.0}),
+    ("bustLift", "Bust lift", {"breast-trans-up": 1.0}),
+    ("hips", "Hips", {"measure-hips-circ-incr": 0.7, "hip-scale-horiz-incr": 0.4}),
+    ("buttocks", "Buttocks", {"buttocks-volume-incr": 1.0}),
+    ("thighs", "Thighs", {"l-upperleg-fat-incr": 1.0, "r-upperleg-fat-incr": 1.0, "measure-thigh-circ-incr": 0.4}),
+    # Anny has no thigh-gap target. Wider pelvis + slightly narrower thighs + legs angled out opens
+    # the gap at mid-thigh from 5.4 to 8.1 cm (average female); -1 closes it to 3.9 cm, and even the
+    # heaviest body at -1 keeps the thighs apart (2.0 cm at the top).
+    ("thighGap", "Thigh gap", {"hip-scale-horiz-incr": 0.8, "l-upperleg-scale-horiz-incr": -0.6, "r-upperleg-scale-horiz-incr": -0.6,
+                               "l-leg-valgus-incr": -0.6, "r-leg-valgus-incr": -0.6}),
+    ("upperArms", "Upper arms", {"l-upperarm-fat-incr": 1.0, "r-upperarm-fat-incr": 1.0}),
+    ("calves", "Calves", {"l-lowerleg-fat-incr": 1.0, "r-lowerleg-fat-incr": 1.0}),
+]
+
 # Anny's anchor grid for the shape phenotypes we expose (see PHENOTYPE_VARIATIONS in anny).
 SHAPE_GRID = {"height": [0.0, 1.0], "weight": [0.0, 0.5, 1.0], "muscle": [0.0, 0.5, 1.0]}
 
@@ -64,7 +84,10 @@ def face_segments(model):
 
 
 def write_glb(path, attributes, indices, morph_targets=(), target_names=()):
-    """Minimal glTF 2.0 binary writer (no extra dependency). Morph targets are POSITION deltas."""
+    """
+    Minimal glTF 2.0 binary writer (no extra dependency). Morph targets are POSITION deltas; a
+    target touching fewer than half the vertices is stored as a sparse accessor (only moved vertices).
+    """
     blobs, views, accessors, attr_map = [], [], [], {}
     offset = 0
 
@@ -86,7 +109,32 @@ def write_glb(path, attributes, indices, morph_targets=(), target_names=()):
         type_ = {1: "SCALAR", 2: "VEC2", 3: "VEC3"}[1 if arr.ndim == 1 else arr.shape[1]]
         attr_map[name] = add(arr.astype(np.float32), 34962, 5126, type_, minmax=(name == "POSITION"))
     idx = add(indices.astype(np.uint32).reshape(-1), 34963, 5125, "SCALAR")
-    targets = [{"POSITION": add(t.astype(np.float32), 34962, 5126, "VEC3", minmax=True)} for t in morph_targets]
+    def add_raw(arr):
+        nonlocal offset
+        data = arr.tobytes()
+        pad = (4 - len(data) % 4) % 4
+        views.append({"buffer": 0, "byteOffset": offset, "byteLength": len(data)})
+        blobs.append(data + b"\0" * pad)
+        offset += len(data) + pad
+        return len(views) - 1
+
+    def add_target(t):
+        t = t.astype(np.float32)
+        moved = np.nonzero(np.abs(t).max(axis=1) > 0)[0]
+        if len(moved) * 2 >= len(t) or len(moved) == 0:
+            return add(t, 34962, 5126, "VEC3", minmax=True)
+        accessors.append({
+            "componentType": 5126, "count": int(len(t)), "type": "VEC3",
+            "min": t.min(0).tolist(), "max": t.max(0).tolist(),
+            "sparse": {
+                "count": int(len(moved)),
+                "indices": {"bufferView": add_raw(moved.astype(np.uint32)), "componentType": 5125},
+                "values": {"bufferView": add_raw(np.ascontiguousarray(t[moved]))},
+            },
+        })
+        return len(accessors) - 1
+
+    targets = [{"POSITION": add_target(t)} for t in morph_targets]
     primitive = {"attributes": attr_map, "indices": idx, "material": 0}
     mesh = {"name": "skin", "primitives": [primitive]}
     if targets:
@@ -178,14 +226,16 @@ def straighten_elbows(model, verts, heads, rots):
     return verts, heads
 
 
-def shape(model, phenotype, rots=None):
+def shape(model, phenotype, rots=None, local=None):
     """Vertices and joints for a phenotype, glTF frame, elbows straightened, feet on y = 0."""
-    out = model(phenotype_kwargs=phenotype)
+    out = model(phenotype_kwargs=phenotype, local_changes_kwargs=local)
     verts = out["rest_vertices"][0].detach().cpu().numpy().astype(np.float64)
     heads = out["rest_bone_heads"][0].detach().cpu().numpy().astype(np.float64)
     rots = rots if rots is not None else elbow_rotations(model, heads)
     verts, heads = straighten_elbows(model, verts, heads, rots)
     verts, heads = to_gltf_frame(verts), to_gltf_frame(heads)
+    if local is not None:
+        return verts, heads, rots  # deltas are taken against the unfloored base below
     floor = verts[:, 1].min()
     verts[:, 1] -= floor
     heads[:, 1] -= floor
@@ -225,6 +275,21 @@ def export(model, name, phenotype, out_dir):
                 corners.append({"height": h, "weight": w, "muscle": m, "height_m": float(cv[:, 1].max()),
                                 "heads": ch.round(5).tolist()})
 
+    # Local body-shape controls: deltas at s = +1 and s = -1 against the base shape (same frame,
+    # before the floor shift, which the app redoes after blending).
+    base_raw, base_heads_raw, _ = shape(model, phenotype, rots, local={})
+    local_meta = []
+    for cid, label, mix in LOCAL_CONTROLS:
+        entry = {"id": cid, "label": label, "mix": mix}
+        for sign, key in ((1.0, "plus"), (-1.0, "minus")):
+            lv, lh, _ = shape(model, phenotype, rots, local={k: c * sign for k, c in mix.items()})
+            targets.append((lv - base_raw)[vid])
+            names.append(f"local:{cid}:{key}")
+            entry[key] = {"target": len(targets) - 1, "heads": (lh - base_heads_raw).round(6).tolist(),
+                          "max_mm": float(np.abs(lv - base_raw).max() * 1000)}
+        local_meta.append(entry)
+        print(f"  {cid}: +{entry['plus']['max_mm']:.0f} mm / -{entry['minus']['max_mm']:.0f} mm")
+
     write_glb(
         out_dir / f"{name}.glb",
         {
@@ -248,7 +313,7 @@ def export(model, name, phenotype, out_dir):
             {"name": n, "parent": int(p), "head": heads[i].round(5).tolist()}
             for i, (n, p) in enumerate(zip(model.bone_labels, model.bone_parents))
         ],
-        "shapes": {"grid": SHAPE_GRID, "base": {k: phenotype[k] for k in SHAPE_GRID}, "corners": corners},
+        "shapes": {"grid": SHAPE_GRID, "base": {k: phenotype[k] for k in SHAPE_GRID}, "corners": corners, "local": local_meta},
     }
     (out_dir / f"{name}.skeleton.json").write_text(json.dumps(skeleton, indent=1))
     print(f"{name}: {len(vid)} vertices, {len(faces)} faces, height {skeleton['height_m']:.3f} m")
@@ -260,7 +325,7 @@ def main():
     args = ap.parse_args()
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    model = anny.Anny().to(dtype=torch.float64)
+    model = anny.Anny(local_changes="default").to(dtype=torch.float64)
     for name, ph in BODIES.items():
         export(model, name, ph, out_dir)
 
