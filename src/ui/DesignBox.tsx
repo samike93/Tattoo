@@ -44,6 +44,11 @@ export function DesignBox() {
       el.style.transform = `translate(${x}px, ${y}px)`;
       el.style.visibility = visible ? 'visible' : 'hidden';
     };
+    // Touch screens get bigger handles (styles.css), so the knob and bin sit further out.
+    const touch = document.documentElement.classList.contains('touch');
+    const knobGap = touch ? 50 : 34;
+    const binGap = touch ? 48 : 30;
+    const minGap = touch ? 52 : 42; // corner + edge hit radii
     const tick = () => {
       const pj = getProjector();
       if (pj) {
@@ -55,21 +60,26 @@ export function DesignBox() {
             place(els.current[id], 0, 0, false);
             continue;
           }
-          const s = pj.project(h.point, h.normal);
-          screen[id] = s;
-          place(els.current[id], s.x, s.y, s.visible);
+          screen[id] = pj.project(h.point, h.normal);
+        }
+        // Small on screen: the edge handles' hit areas would cover the corners, so show corners only.
+        const near = (a?: { x: number; y: number }, b?: { x: number; y: number }) => !!a && !!b && Math.hypot(a.x - b.x, a.y - b.y) < minGap;
+        const crowded = !box.band && (near(screen.n, screen.ne) || near(screen.e, screen.ne) || near(screen.s, screen.sw) || near(screen.w, screen.sw));
+        for (const id of [...CORNERS, ...EDGES]) {
+          const s = screen[id];
+          if (s) place(els.current[id], s.x, s.y, s.visible && !(crowded && EDGES.includes(id)));
         }
         // Rotate knob: beyond the top edge, along the centre -> top direction on screen.
         const n = screen.n;
         if (n && !box.band) {
           const dx = n.x - c.x, dy = n.y - c.y, L = Math.hypot(dx, dy) || 1;
-          place(els.current.rotate, n.x + (dx / L) * 34, n.y + (dy / L) * 34, n.visible);
+          place(els.current.rotate, n.x + (dx / L) * knobGap, n.y + (dy / L) * knobGap, n.visible);
         } else place(els.current.rotate, 0, 0, false);
         // Delete: just outside the top-right corner (top edge for bands).
         const t = screen.ne ?? screen.n;
         if (t) {
           const dx = t.x - c.x, dy = t.y - c.y, L = Math.hypot(dx, dy) || 1;
-          place(els.current.trash, t.x + (dx / L) * 30, t.y + (dy / L) * 30, t.visible);
+          place(els.current.trash, t.x + (dx / L) * binGap, t.y + (dy / L) * binGap, t.visible);
         } else place(els.current.trash, 0, 0, false);
       }
       raf = requestAnimationFrame(tick);
@@ -81,6 +91,13 @@ export function DesignBox() {
   const start = (e: RPointerEvent<HTMLElement>, id: HandleId | 'rotate') => {
     const pj = getProjector();
     if (!pj || !box) return;
+    if (useApp.getState().pencilMode && e.pointerType === 'touch') {
+      // Pencil mode: handles are for the Pencil; a finger (or palm) on one turns the view instead.
+      // Small designs are mostly covered by handle hit areas, so pass the touch on to the 3D view.
+      e.stopPropagation();
+      document.querySelector('.stage canvas')?.dispatchEvent(new PointerEvent('pointerdown', e.nativeEvent));
+      return;
+    }
     e.preventDefault();
     e.stopPropagation();
     (document.activeElement as HTMLElement | null)?.blur?.(); // so Delete and Escape reach the page

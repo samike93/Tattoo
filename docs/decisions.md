@@ -144,3 +144,15 @@ painted it on top). Fresh adds sheen and redness around the lines. Estimates, la
 Poly Haven HDRIs are CC0 but the download was blocked here, and a runtime download would break
 offline use, so the environment is built in code: a portrait-studio softbox setup (default) and an
 overhead-fluorescent "shop" setup. A shadow-casting key light and a soft contact blob ground the body.
+
+### 2026-10-01: Apple Pencil and touch
+
+iPadOS Safari reports itself as a Mac, so an iPad is detected from touch support
+(`maxTouchPoints > 1`); the Pencil is detected from `pointerType === 'pen'` on its first touch, which
+switches on Pencil mode (remembered on the device). Pencil mode follows Procreate: Pencil edits,
+fingers move the camera, which also gives palm rejection. A finger on a selection handle in Pencil
+mode is handed to the camera, because on a small design the handles cover most of it. Touch screens
+get larger handles; when the box is small on screen the edge handles hide so they never cover the
+corners. Without a Pencil, one finger drags the design and a second finger pinches/twists it.
+Tested in headless Chromium with simulated touch and pen input (`scripts/e2e-input.mjs`), not yet
+on a real iPad.

@@ -5,6 +5,7 @@ import { Scene } from './ui/Scene';
 import { DebugPanel } from './debug/DebugPanel';
 import { ImportDialog } from './ui/ImportDialog';
 import { DesignBox } from './ui/DesignBox';
+import { installPenTracking, isIPad, isTouchDevice } from './ui/input';
 import { hashToState, stateToHash, useApp } from './state';
 
 export function App() {
@@ -55,9 +56,13 @@ export function App() {
       e.preventDefault();
       useApp.getState().set({ importDialog: { open: true, file } });
     };
+    const stopPen = installPenTracking();
+    if (isIPad()) document.documentElement.classList.add('ipad');
+    if (isTouchDevice()) document.documentElement.classList.add('touch');
     window.addEventListener('dragover', onDragOver);
     window.addEventListener('drop', onDrop);
     return () => {
+      stopPen();
       window.removeEventListener('dragover', onDragOver);
       window.removeEventListener('drop', onDrop);
       window.removeEventListener('hashchange', apply);
@@ -85,10 +90,27 @@ export function App() {
         {status !== 'Ready' && <div className="status">{status}</div>}
         <DesignBox />
         <DeletedToast />
+        <Notice />
       </main>
       {ui && <Panel />}
       <DebugPanel />
       <ImportDialog />
+    </div>
+  );
+}
+
+function Notice() {
+  const notice = useApp((s) => s.notice);
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => useApp.getState().set({ notice: null }), 7000);
+    return () => clearTimeout(t);
+  }, [notice]);
+  if (!notice) return null;
+  return (
+    <div className="toast notice" role="status">
+      {notice}
+      <button onClick={() => useApp.getState().set({ notice: null })}>OK</button>
     </div>
   );
 }

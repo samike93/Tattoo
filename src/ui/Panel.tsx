@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { exportImage, EXPORT_LONG_SIDE, type ExportView } from './Exporter';
 import { localRange } from '../body/shape';
+import { isTouchDevice, savePencilMode } from './input';
 import { SKIN_PRESETS, skinHex } from '../ink/skinTone';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
@@ -146,14 +147,30 @@ export function Panel() {
           {s.resolved.limbLabel ? ` on the ${s.resolved.limbLabel.toLowerCase()}` : ''}
         </p>
         <p className="hint">
-          Tap the body to place the design and drag it to move. Tap the design for the box: corners resize, side dots stretch, the round knob rotates
-          (Shift snaps to 15°), Delete key or the bin removes it (Ctrl/⌘+Z undoes).
+          {s.pencilMode
+            ? 'Pencil: tap the skin to place the design and drag anywhere to move it. Fingers: one turns the view, two zoom. Use the box handles to resize and rotate, the bin to delete.'
+            : isTouchDevice()
+              ? 'Tap the body to place the design and drag it with a finger to move it. Two fingers on the design: pinch to resize, twist to rotate. The box handles and bin work too.'
+              : 'Tap the body to place the design and drag it to move. Tap the design for the box: corners resize, side dots stretch, the round knob rotates (Shift snaps to 15°), Delete key or the bin removes it (Ctrl/⌘+Z undoes).'}
         </p>
         {s.method !== 'cylinder' && (
           <div className="seg">
             <button className={!s.placement && s.spot === 'forearm' ? 'on' : ''} onClick={() => s.set({ spot: 'forearm', placement: null })}>Outer forearm</button>
             <button className={!s.placement && s.spot === 'shoulderBlade' ? 'on' : ''} onClick={() => s.set({ spot: 'shoulderBlade', placement: null })}>Shoulder blade</button>
           </div>
+        )}
+        {(s.pencilMode || isTouchDevice()) && (
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={s.pencilMode}
+              onChange={(e) => {
+                s.set({ pencilMode: e.target.checked });
+                savePencilMode(e.target.checked);
+              }}
+            />{' '}
+            Apple Pencil mode: the Pencil moves the design, fingers only move the view
+          </label>
         )}
         {(s.resolved.limbLabel || s.method === 'cylinder') && s.method !== 'decal' && s.method !== 'expmap' && (
           <label className="check">

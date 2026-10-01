@@ -19,3 +19,4 @@ jobs:
       - run: npm run build
       - run: npx playwright-core install --with-deps chromium
       - run: node scripts/e2e.mjs
+      - run: node scripts/e2e-input.mjs

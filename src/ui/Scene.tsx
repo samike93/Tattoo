@@ -35,6 +35,7 @@ import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
 import { useApp, type AppState, type CameraPreset, type Spot } from '../state';
 import { Exporter } from './Exporter';
+import { lastPointerType, trackPinch } from './input';
 import { HANDLE_UV, locateUV, setBox, setProjector, type HandleId, type SurfacePoint } from '../placement/box';
 import { add, dot, normalize, scale, sub, tangentFrame, type Vec3 } from '../projection/vec';
 
@@ -300,6 +301,7 @@ function TestHooks({ body }: { body: LoadedBody | null }) {
       controls?.target.set(...target);
       controls?.update();
     };
+    t.orbitEnabled = () => controls?.enabled ?? null;
     t.gpuMemory = () => ({ ...gl.info.memory });
     t.bodyHeight = () => {
       const bb = body?.geometry.boundingBox;
@@ -350,7 +352,7 @@ function Body({ body }: { body: LoadedBody }) {
   /** What is currently drawn, for hit-testing drags. */
   const live = useRef<{ kind: 'none' } | { kind: 'cylinder'; frame: LimbFrame; pl: CylPlacement; tf: DesignTransform } | { kind: 'expmap'; coords: Float64Array; tf: DesignTransform } | { kind: 'decal'; hit: SurfaceHit; tf: DesignTransform }>({ kind: 'none' });
   const seq = useRef(0);
-  const drag = useRef<{ offset: Vec3; pointerId: number } | null>(null);
+  const drag = useRef<{ offset: Vec3; pointerId: number; stopPinch?: () => void; pinching?: boolean } | null>(null);
 
   const shared = useApp(useShallow((s: AppState): Shared => ({
     method: s.method, limbId: s.limbId, cylMode: s.cylMode, band: s.band, slide: s.slide, around: s.around,
@@ -629,12 +631,26 @@ function Body({ body }: { body: LoadedBody }) {
   };
 
   const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    const st = useApp.getState();
+    if (st.design.kind === 'none') return;
+    // Pencil mode: fingers only move the view (and a resting palm can't knock the design around).
+    if (st.pencilMode && e.pointerType === 'touch') return;
     const h = hitFromIntersection(body, e.intersections[0]);
-    if (!h || !onDesign(h)) return;
+    if (!h) return;
+    const pen = e.pointerType === 'pen';
+    const grabbed = onDesign(h);
+    // A Pencil works anywhere on the skin: touching off the design brings the design to the tip.
+    if (!grabbed && !pen) return;
     e.stopPropagation();
-    const focus = useApp.getState().focus;
-    drag.current = { offset: focus ? sub(focus.point, h.point) : [0, 0, 0], pointerId: e.pointerId };
-    if (!useApp.getState().selected) useApp.getState().set({ selected: true });
+    if (!grabbed) moveTo(h);
+    const focus = st.focus;
+    drag.current = { offset: grabbed && focus ? sub(focus.point, h.point) : [0, 0, 0], pointerId: e.pointerId };
+    if (e.pointerType === 'touch') {
+      // A second finger turns the drag into pinch-to-resize and twist-to-rotate.
+      const d = drag.current;
+      d.stopPinch = trackPinch(e.nativeEvent, (active) => (d.pinching = active));
+    }
+    if (!st.selected) st.set({ selected: true });
     if (controls) controls.enabled = false; // the gesture moves the design, not the camera
     (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
     document.body.style.cursor = 'grabbing';
@@ -646,6 +662,7 @@ function Body({ body }: { body: LoadedBody }) {
       document.body.style.cursor = h && onDesign(h) ? 'grab' : '';
       return;
     }
+    if (drag.current.pinching || e.pointerId !== drag.current.pointerId) return;
     const h = surfaceHitFromRay(e.ray);
     if (!h) return;
     // Keep the grabbed point under the finger: shift by the grab offset and snap back onto the skin.
@@ -656,6 +673,7 @@ function Body({ body }: { body: LoadedBody }) {
 
   const endDrag = () => {
     if (!drag.current) return;
+    drag.current.stopPinch?.();
     drag.current = null;
     if (controls) controls.enabled = true;
     document.body.style.cursor = '';
@@ -663,10 +681,12 @@ function Body({ body }: { body: LoadedBody }) {
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return; // that was an orbit drag, not a tap
+    const app = useApp.getState();
+    // Pencil mode: finger taps don't place the design (fingers are for the view).
+    if (app.pencilMode && ((e.nativeEvent as PointerEvent).pointerType || lastPointerType) === 'touch') return;
     e.stopPropagation();
     const hit = hitFromIntersection(body, e.intersections[0]);
     if (!hit) return;
-    const app = useApp.getState();
     if (app.design.kind === 'none') {
       app.set({ status: 'Import a design (or press Undo) to place it.' });
       return;

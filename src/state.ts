@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { skinHex } from './ink/skinTone';
+import { savedPencilMode } from './ui/input';
 import type { BodyId } from './body/skeleton';
 import type { CylMode } from './projection/cylindrical';
 import type { DistortionStats } from './projection/distortion';
@@ -79,6 +80,10 @@ export interface AppState {
   ui: boolean;
   /** The design is selected: shows the on-body box with resize, rotate and delete handles. */
   selected: boolean;
+  /** Apple Pencil mode: the Pencil edits the design, fingers only move the view. */
+  pencilMode: boolean;
+  /** One-off message shown over the 3D view (auto-hides). */
+  notice: string | null;
   /** Last deleted design, for Undo. */
   deleted: { design: DesignSource; widthIn: number; heightIn: number; rotationDeg: number } | null;
   /** Import dialog: closed, open, or open with a file dropped onto the page. */
@@ -141,6 +146,8 @@ export const useApp = create<AppState>((set) => ({
   ui: true,
   importDialog: { open: false },
   selected: true,
+  pencilMode: savedPencilMode(),
+  notice: null,
   deleted: null,
   camera: { preset: 'front', nonce: 0 },
   focus: null,

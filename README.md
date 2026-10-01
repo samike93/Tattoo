@@ -32,9 +32,14 @@ npm run dev          # http://localhost:5173
    15°). **Delete** or **Backspace** (or the bin button on iPad) removes the design; **Undo** or
    Ctrl/⌘+Z brings it back; Escape or tapping off the body hides the box. Sliders in the panel
    show the exact size in inches and centimetres.
-5. **Ink look**: Fresh (just done), Healed (default) or Aged 10+ years, to show how fine lines and
+5. **iPad and Apple Pencil**: with fingers only, drag the design with one finger and pinch or twist
+   it with two to resize and rotate; drag off the design to turn the view. The first Pencil touch
+   switches on **Apple Pencil mode** (as in Procreate): the Pencil places, moves and resizes the
+   design (touching bare skin brings the design to the tip), and fingers only turn and zoom the
+   view, so a resting palm can't knock the design around. Toggle it in the panel under View.
+6. **Ink look**: Fresh (just done), Healed (default) or Aged 10+ years, to show how fine lines and
    small lettering will hold up. **Studio light** or **Shop light** under View.
-6. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
+7. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
    share sheet.
 
 The **1-inch grid** design is still there for checking accuracy, and **Method (advanced)** at the

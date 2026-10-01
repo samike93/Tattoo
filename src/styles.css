@@ -214,3 +214,12 @@ details.advanced[open] > summary { margin-bottom: 8px; }
 details.shape { margin: 4px 0 10px; border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 10px; }
 details.shape > summary { cursor: pointer; font-weight: 600; padding: 2px 0; }
 details.shape[open] > summary { margin-bottom: 4px; }
+
+/* Touch and iPad */
+.stage { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.toast.notice { bottom: auto; top: 16px; border-radius: 14px; }
+.touch .box-handle { width: 24px; height: 24px; margin: -12px 0 0 -12px; }
+.touch .box-handle.edge { width: 20px; height: 20px; margin: -10px 0 0 -10px; }
+.touch .box-handle.rotate, .touch .box-handle.trash { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
+.touch .box-handle::after { inset: -14px; }
+.touch .slider input[type='range'] { height: 32px; }
