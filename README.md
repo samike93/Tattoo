@@ -36,6 +36,7 @@ It uses relative paths, so it works anywhere:
 | **GitHub Pages** | Already set up. In the repo: Settings → Pages → Source: **GitHub Actions**. Every push to `main` publishes to `https://<user>.github.io/<repo>/`. |
 | **Your existing site** | Copy `dist/` into a folder, e.g. `yoursite.com/preview/`. No server code or rewrites needed. |
 | **Netlify / Vercel / Cloudflare Pages** | Build command `npm run build`, output folder `dist`. |
+| **Hosts that refuse `.glb` files** | `VITE_MODELS_AS_TEXT=1 npm run build && node scripts/models-as-text.mjs` ships the bodies as base64 text instead. |
 | **Embed in a page** | `<iframe src="https://yoursite.com/preview/" style="width:100%;height:80vh;border:0" allow="clipboard-write"></iframe>` |
 
 Needs a browser with WebGL 2 (Safari 15+, Chrome, Edge, Firefox; iPad works).

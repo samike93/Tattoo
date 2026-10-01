@@ -19,7 +19,12 @@ export function App() {
       clearTimeout(timer);
       timer = window.setTimeout(() => {
         const h = '#' + stateToHash(s);
-        if (h !== location.hash) history.replaceState(null, '', h);
+        // Some embeds (sandboxed iframes) refuse history changes; the app works without them.
+        try {
+          if (h !== location.hash) history.replaceState(null, '', h);
+        } catch {
+          /* share links unavailable here */
+        }
       }, 250);
     });
     const onKey = (e: KeyboardEvent) => {

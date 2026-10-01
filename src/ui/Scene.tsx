@@ -34,6 +34,7 @@ Object.assign(BufferGeometry.prototype, { computeBoundsTree, disposeBoundsTree }
 Object.assign(Mesh.prototype, { raycast: acceleratedRaycast });
 
 const rawCache = new Map<BodyId, Promise<RawBody>>();
+let framedOnce = false;
 function loadRaw(id: BodyId) {
   if (!rawCache.has(id)) rawCache.set(id, fetchRawBody(id, import.meta.env.BASE_URL));
   return rawCache.get(id)!;
@@ -299,6 +300,11 @@ function Body({ body }: { body: LoadedBody }) {
         status: 'Ready',
       });
       app.setTiming('placementMs', performance.now() - t0);
+      if (!framedOnce && focus) {
+        // Open on the design, not the whole body: the placement is the point of the page.
+        framedOnce = true;
+        app.requestCamera('design');
+      }
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       app.logError(msg);
