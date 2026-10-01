@@ -27,7 +27,7 @@ export function Panel() {
     <aside className="panel">
       <header className="panel-head">
         <h1>Tattoo Preview</h1>
-        <span className="tag">Phase 1</span>
+        {window.self === window.top && <span className="tag">Phase 1</span>}
       </header>
 
       <Section title="Body">

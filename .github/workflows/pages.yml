@@ -1,9 +1,10 @@
-# Publishes the app to GitHub Pages on every push to main.
+# Publishes the app to GitHub Pages (https://samike93.github.io/Tattoo/) on every push to the
+# default branch. The Sleek Attire page sleekattire.com/pages/tattoo-mockup embeds that URL.
 # One-time setup: repo Settings → Pages → Build and deployment → Source: "GitHub Actions".
 name: Deploy to GitHub Pages
 on:
   push:
-    branches: [main]
+    branches: [main, claude/tattoo-3d-preview-research-ubsa0k]
   workflow_dispatch:
 permissions:
   contents: read
