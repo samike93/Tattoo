@@ -4,6 +4,7 @@ import { Panel } from './ui/Panel';
 import { Scene } from './ui/Scene';
 import { DebugPanel } from './debug/DebugPanel';
 import { ImportDialog } from './ui/ImportDialog';
+import { DesignBox } from './ui/DesignBox';
 import { hashToState, stateToHash, useApp } from './state';
 
 export function App() {
@@ -29,8 +30,19 @@ export function App() {
       }, 250);
     });
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, select, textarea')) return;
-      if (e.key === 'd' || e.key === 'D') useApp.getState().set({ debugOpen: !useApp.getState().debugOpen });
+      // Ignore keys only while typing; Delete still works after ticking a checkbox or moving a slider.
+      const typing = 'textarea, select, [contenteditable], input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=button]):not([type=color])';
+      if ((e.target as HTMLElement).closest(typing)) return;
+      const st = useApp.getState();
+      if (st.importDialog.open) return; // the dialog has its own keys
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        st.undoDelete();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault();
+        st.deleteDesign();
+      } else if (e.key === 'Escape') st.set({ selected: false });
+      else if (e.key === 'd' || e.key === 'D') st.set({ debugOpen: !st.debugOpen });
     };
     window.addEventListener('keydown', onKey);
     // Drop a design anywhere on the page.
@@ -63,6 +75,7 @@ export function App() {
             dpr={[1, 2]}
             gl={{ antialias: true, preserveDrawingBuffer: true }}
             onCreated={({ gl }) => gl.setClearColor('#2b2d33')}
+            onPointerMissed={() => useApp.getState().set({ selected: false })}
           >
             <Suspense fallback={null}>
               <Scene />
@@ -70,10 +83,28 @@ export function App() {
           </Canvas>
         </ErrorBoundary>
         {status !== 'Ready' && <div className="status">{status}</div>}
+        <DesignBox />
+        <DeletedToast />
       </main>
       {ui && <Panel />}
       <DebugPanel />
       <ImportDialog />
+    </div>
+  );
+}
+
+function DeletedToast() {
+  const deleted = useApp((s) => s.deleted);
+  const none = useApp((s) => s.design.kind === 'none');
+  if (!none) return null;
+  return (
+    <div className="toast" role="status">
+      {deleted ? 'Design deleted.' : 'No design on the body.'}
+      {deleted ? (
+        <button onClick={() => useApp.getState().undoDelete()}>Undo</button>
+      ) : (
+        <button onClick={() => useApp.getState().set({ importDialog: { open: true } })}>Import</button>
+      )}
     </div>
   );
 }

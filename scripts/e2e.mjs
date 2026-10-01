@@ -81,6 +81,66 @@ try {
   await page.evaluate(() => window.tattoo.set({ widthIn: 3, heightIn: 4 }));
   await settle();
 
+  // Selection box: resize from a corner, stretch from an edge, rotate, delete and undo.
+  const handle = async (cls) => {
+    const b = await page.locator(`.box-handle.${cls}`).boundingBox();
+    return b && { x: b.x + b.width / 2, y: b.y + b.height / 2 };
+  };
+  const dragFrom = async (p, dx, dy) => {
+    await page.mouse.move(p.x, p.y);
+    await page.mouse.down();
+    for (let k = 1; k <= 10; k++) await page.mouse.move(p.x + (dx * k) / 10, p.y + (dy * k) / 10);
+    await page.mouse.up();
+    await settle(900);
+  };
+  const size = () => page.evaluate(() => { const s = window.tattoo.get(); return { w: s.widthIn, h: s.heightIn, r: s.rotationDeg, kind: s.design.kind }; });
+  check('the selection box shows 8 handles, rotate and delete', (await page.locator('.box-handle').count()) === 10);
+  let se = await handle('h-se'), center = await project((await state()).focus.point);
+  let z0 = await size();
+  await dragFrom(se, (se.x - center.x) * 0.5, (se.y - center.y) * 0.5);
+  let z1 = await size();
+  check('dragging a corner outwards enlarges the design proportionally', z1.w > z0.w * 1.3 && Math.abs(z1.w / z1.h - z0.w / z0.h) < 0.03, `${z0.w}x${z0.h} -> ${z1.w}x${z1.h}`);
+  // (Side handles that wrap round the far side of a limb are hidden; the top edge faces the camera.)
+  const nh = await handle('h-n');
+  await dragFrom(nh, -(nh.x - center.x) * 0.3, -(nh.y - center.y) * 0.3);
+  const z2 = await size();
+  check('dragging a side handle stretches only that side', z2.h < z1.h * 0.85 && z2.w === z1.w, `${z1.w}x${z1.h} -> ${z2.w}x${z2.h}`);
+  const knob = await handle('rotate');
+  center = await project((await state()).focus.point);
+  // Swing the knob a quarter turn clockwise around the centre (on screen).
+  const rx = knob.x - center.x, ry = knob.y - center.y;
+  await page.mouse.move(knob.x, knob.y);
+  await page.mouse.down();
+  for (let k = 1; k <= 12; k++) {
+    const a = (k / 12) * (Math.PI / 2);
+    await page.mouse.move(center.x + rx * Math.cos(a) - ry * Math.sin(a), center.y + rx * Math.sin(a) + ry * Math.cos(a));
+  }
+  await page.mouse.up();
+  await settle(900);
+  const z3 = await size();
+  check('the rotate knob turns the design (clockwise drag = clockwise turn)', z3.r <= -70 && z3.r >= -110, `${z3.r}°`);
+  const top = await handle('h-n');
+  const cNow = await project((await state()).focus.point);
+  const turned = Math.atan2(top.y - cNow.y, top.x - cNow.x) - Math.atan2(ry, rx);
+  check('after turning, the top handle sits where the knob was dragged', Math.abs(Math.cos(turned) - Math.cos(Math.PI / 2)) < 0.35, `${((turned * 180) / Math.PI).toFixed(0)}°`);
+  await page.evaluate(() => window.tattoo.set({ widthIn: 3, heightIn: 4, rotationDeg: 0 }));
+  await settle(800);
+  await page.keyboard.press('Delete');
+  await settle(800);
+  check('Delete removes the design and offers Undo', (await size()).kind === 'none' && (await page.getByRole('button', { name: 'Undo' }).count()) > 0);
+  await page.keyboard.press('Control+z');
+  await settle(1000);
+  check('Ctrl+Z brings it back, selected', (await size()).kind === 'checker' && (await page.locator('.box-handle').count()) === 10);
+  await page.locator('.box-handle.trash').click();
+  await settle(600);
+  await page.getByRole('button', { name: 'Undo' }).first().click();
+  await settle(1000);
+  check('the bin button deletes and Undo restores', (await size()).kind === 'checker');
+  await page.screenshot({ path: `${OUT}/e2e-selection-box.png` });
+  await page.keyboard.press('Escape');
+  await settle(400);
+  check('Escape hides the box', (await page.locator('.box-handle').count()) === 0);
+
   // Drag the design: grab its centre and move the pointer.
   s = await state();
   const c = await project(s.focus.point);

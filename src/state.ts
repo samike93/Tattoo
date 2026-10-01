@@ -9,7 +9,8 @@ export type CameraPreset = 'front' | 'back' | 'left' | 'right' | 'design' | 'opp
 export type Spot = 'forearm' | 'shoulderBlade' | 'innerElbow';
 
 export interface DesignSource {
-  kind: 'checker' | 'image';
+  /** 'none' = the design was deleted (see `deleted` for undo). */
+  kind: 'checker' | 'image' | 'none';
   name: string;
   /** Pixel aspect (width / height) of an uploaded image. */
   aspect: number;
@@ -65,6 +66,10 @@ export interface AppState {
   skinDetail: boolean;
   debugOpen: boolean;
   ui: boolean;
+  /** The design is selected: shows the on-body box with resize, rotate and delete handles. */
+  selected: boolean;
+  /** Last deleted design, for Undo. */
+  deleted: { design: DesignSource; widthIn: number; heightIn: number; rotationDeg: number } | null;
   /** Import dialog: closed, open, or open with a file dropped onto the page. */
   importDialog: { open: boolean; file?: File; edit?: boolean };
   camera: { preset: CameraPreset; nonce: number };
@@ -86,6 +91,8 @@ export interface AppState {
   logError: (message: string) => void;
   setTiming: (key: string, ms: number) => void;
   requestCamera: (preset: CameraPreset) => void;
+  deleteDesign: () => void;
+  undoDelete: () => void;
 }
 
 export const DEFAULT_HEIGHTS: Record<BodyId, number> = { male: 1.78, female: 1.65 };
@@ -117,6 +124,8 @@ export const useApp = create<AppState>((set) => ({
   debugOpen: false,
   ui: true,
   importDialog: { open: false },
+  selected: true,
+  deleted: null,
   camera: { preset: 'front', nonce: 0 },
   focus: null,
   focusOpposite: null,
@@ -132,6 +141,18 @@ export const useApp = create<AppState>((set) => ({
     set((s) => ({ errors: [...s.errors.slice(-49), { time: new Date().toISOString().slice(11, 19), message }] })),
   setTiming: (key, ms) => set((s) => ({ timings: { ...s.timings, [key]: ms } })),
   requestCamera: (preset) => set((s) => ({ camera: { preset, nonce: s.camera.nonce + 1 } })),
+  deleteDesign: () =>
+    set((s) =>
+      s.design.kind === 'none'
+        ? {}
+        : {
+            deleted: { design: s.design, widthIn: s.widthIn, heightIn: s.heightIn, rotationDeg: s.rotationDeg },
+            design: { kind: 'none', name: '', aspect: 1 },
+            selected: false,
+          },
+    ),
+  undoDelete: () =>
+    set((s) => (s.deleted ? { ...s.deleted, deleted: null, selected: true } : {})),
 }));
 
 /** State that goes into a share link (everything except uploaded images and readouts). */

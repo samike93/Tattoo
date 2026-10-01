@@ -31,6 +31,7 @@ import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
 import { useApp, type AppState, type CameraPreset, type Spot } from '../state';
 import { Exporter } from './Exporter';
+import { HANDLE_UV, locateUV, setBox, setProjector, type HandleId, type SurfacePoint } from '../placement/box';
 import { add, dot, normalize, scale, sub, tangentFrame, type Vec3 } from '../projection/vec';
 
 // three-mesh-bvh: fast raycasts on the body (tapping to place a design).
@@ -92,6 +93,7 @@ export function Scene() {
       <FrameStats />
       <TestHooks body={body} />
       <Exporter body={body} />
+      <BoxProjector />
     </>
   );
 }
@@ -175,6 +177,29 @@ function CameraRig({ body }: { body: LoadedBody | null }) {
   return null;
 }
 
+/** Lets the DOM selection box project skin points to the screen and pause orbiting while dragging. */
+function BoxProjector() {
+  const camera = useThree((s) => s.camera);
+  const dom = useThree((s) => s.gl.domElement);
+  const controls = useThree((s) => s.controls) as OrbitControls | null;
+  useEffect(() => {
+    const v = new Vector3();
+    setProjector({
+      project: (p, n) => {
+        v.set(...p).project(camera);
+        const r = dom.getBoundingClientRect();
+        const toCam = sub([camera.position.x, camera.position.y, camera.position.z], p);
+        return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height, visible: v.z < 1 && (!n || dot(n, toCam) > 0) };
+      },
+      setOrbitEnabled: (on) => {
+        if (controls) controls.enabled = on;
+      },
+    });
+    return () => setProjector(null);
+  }, [camera, dom, controls]);
+  return null;
+}
+
 /** Hooks for automated tests and console debugging: window.tattoo.project(p) and .bodyHeight(). */
 function TestHooks({ body }: { body: LoadedBody | null }) {
   const camera = useThree((s) => s.camera);
@@ -227,7 +252,7 @@ function FrameStats() {
 
 type Shared = Pick<
   AppState,
-  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone' | 'skinDetail'
+  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone' | 'skinDetail' | 'selected'
 >;
 
 function Body({ body }: { body: LoadedBody }) {
@@ -247,7 +272,7 @@ function Body({ body }: { body: LoadedBody }) {
   const shared = useApp(useShallow((s: AppState): Shared => ({
     method: s.method, limbId: s.limbId, cylMode: s.cylMode, band: s.band, slide: s.slide, around: s.around,
     placement: s.placement, spot: s.spot, widthIn: s.widthIn, heightIn: s.heightIn, rotationDeg: s.rotationDeg, mirror: s.mirror,
-    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone, skinDetail: s.skinDetail,
+    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone, skinDetail: s.skinDetail, selected: s.selected,
   })));
 
   const frameFor = (id: string) => {
@@ -279,6 +304,16 @@ function Body({ body }: { body: LoadedBody }) {
       material.color = new Color(shared.skinTone);
       uniforms.uDetail.value = shared.skinDetail ? 1 : 0;
       uniforms.uSSS.value = shared.skinDetail ? 1 : 0;
+      uniforms.uSelected.value = shared.selected;
+      if (shared.design.kind === 'none') {
+        // Deleted: bare skin, no box.
+        uniforms.uInkMode.value = 0;
+        live.current = { kind: 'none' };
+        setDecal(null);
+        setBox(null);
+        app.set({ metrics: null, metricsNote: '', status: 'Ready' });
+        return;
+      }
       const geo = body.geometry;
       const inkCoord = geo.getAttribute('inkCoord');
       const inkMask = geo.getAttribute('inkMask');
@@ -331,7 +366,17 @@ function Body({ body }: { body: LoadedBody }) {
       }
       const tex = designTexRef.current.tex;
 
-      const finish = (metrics: DistortionStats | null, focus: SurfaceHit | null, note: string) => {
+      const finish = (metrics: DistortionStats | null, focus: SurfaceHit | null, note: string, uv?: { field: Float64Array; skip?: (t: number) => boolean }) => {
+        if (uv) {
+          const ids = (band ? ['n', 's'] : Object.keys(HANDLE_UV)) as HandleId[];
+          const found = locateUV([[0.5, 0.5], ...ids.map((id) => HANDLE_UV[id])], uv.field, body.surface.positions, body.surface.normals, body.surface.triangles, uv.skip);
+          const handles: Partial<Record<HandleId, SurfacePoint>> = {};
+          ids.forEach((id, k) => {
+            if (found[k + 1]) handles[id] = found[k + 1]!;
+          });
+          const center = found[0] ?? (focus ? { point: focus.point, normal: focus.normal } : null);
+          setBox(center ? { center, handles, band } : null);
+        } else setBox(null);
         uniforms.uInk.value = tex;
         setDesignUniforms(uniforms, tf, shared.opacity);
         uniforms.uShowRegion.value = shared.showRegion;
@@ -364,7 +409,26 @@ function Body({ body }: { body: LoadedBody }) {
         live.current = { kind: 'cylinder', frame: fr, pl: p, tf };
         setDecal(null);
         const metrics = measureSamples(cylinderSamples(body.surface, fr, p, tf), tf, band ? width : undefined);
-        finish(metrics, hit ?? limbSurfacePoint(body, mesh, fr, p.centerT, p.centerAngle), note);
+        // Design coordinates per limb vertex, for the selection box; skip triangles across the seam.
+        const n = body.surface.vertexCount;
+        const field = new Float64Array(2 * n).fill(NaN);
+        const xs = new Float64Array(n), cs = new Float64Array(n);
+        for (let v = 0; v < n; v++) {
+          if (!fr.vertexMask[v]) continue;
+          const c = cylCoords(fr, [body.surface.positions[3 * v], body.surface.positions[3 * v + 1], body.surface.positions[3 * v + 2]], p);
+          const [u, w] = designUV(c.x, c.y, c.C, tf);
+          field[2 * v] = u;
+          field[2 * v + 1] = w;
+          xs[v] = c.x;
+          cs[v] = c.C;
+        }
+        const tri = body.surface.triangles;
+        const skip = (t: number) => {
+          const a = tri[t], b = tri[t + 1], c = tri[t + 2];
+          const half = Math.min(cs[a], cs[b], cs[c]) / 2;
+          return Math.abs(xs[a] - xs[b]) > half || Math.abs(xs[b] - xs[c]) > half || Math.abs(xs[a] - xs[c]) > half;
+        };
+        finish(metrics, hit ?? limbSurfacePoint(body, mesh, fr, p.centerT, p.centerAngle), note, { field, skip });
       };
 
       if (method === 'cylinder' && frame && pl) {
@@ -393,7 +457,14 @@ function Body({ body }: { body: LoadedBody }) {
             uniforms.uInkMode.value = 1;
             live.current = { kind: 'expmap', coords: em.coords, tf };
             setDecal(null);
-            finish(metrics, seedHit, '');
+            const field = new Float64Array(em.coords.length).fill(NaN);
+            for (let v = 0; v < em.coords.length / 2; v++) {
+              if (!Number.isFinite(em.coords[2 * v])) continue;
+              const [u, w] = designUV(em.coords[2 * v], em.coords[2 * v + 1], 1, tf);
+              field[2 * v] = u;
+              field[2 * v + 1] = w;
+            }
+            finish(metrics, seedHit, '', { field });
           })
           .catch(fail);
       } else if (hit) {
@@ -408,7 +479,18 @@ function Body({ body }: { body: LoadedBody }) {
           old?.dispose();
           return g;
         });
-        finish(measureSamples(decalSamples(g), tf), hit, 'three.js DecalGeometry: a flat box projection, shown for comparison. Watch the sides of curved areas and the back of the arm.');
+        const fr = tangentFrame(hit.normal, [0, 1, 0]);
+        const n = body.surface.vertexCount;
+        const field = new Float64Array(2 * n).fill(NaN);
+        for (let v = 0; v < n; v++) {
+          const d = sub([body.surface.positions[3 * v], body.surface.positions[3 * v + 1], body.surface.positions[3 * v + 2]], hit.point);
+          const nv: Vec3 = [body.surface.normals[3 * v], body.surface.normals[3 * v + 1], body.surface.normals[3 * v + 2]];
+          if (Math.abs(dot(d, fr.n)) > Math.max(width, height) / 2 || dot(nv, fr.n) < 0.2) continue;
+          const [u, w] = designUV(dot(d, fr.e1), dot(d, fr.e2), 1, tf);
+          field[2 * v] = u;
+          field[2 * v + 1] = w;
+        }
+        finish(measureSamples(decalSamples(g), tf), hit, 'three.js DecalGeometry: a flat box projection, shown for comparison. Watch the sides of curved areas and the back of the arm.', { field });
       }
     } catch (e) {
       fail(e);
@@ -467,6 +549,7 @@ function Body({ body }: { body: LoadedBody }) {
     e.stopPropagation();
     const focus = useApp.getState().focus;
     drag.current = { offset: focus ? sub(focus.point, h.point) : [0, 0, 0], pointerId: e.pointerId };
+    if (!useApp.getState().selected) useApp.getState().set({ selected: true });
     if (controls) controls.enabled = false; // the gesture moves the design, not the camera
     (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
     document.body.style.cursor = 'grabbing';
@@ -499,6 +582,11 @@ function Body({ body }: { body: LoadedBody }) {
     const hit = hitFromIntersection(body, e.intersections[0]);
     if (!hit) return;
     const app = useApp.getState();
+    if (app.design.kind === 'none') {
+      app.set({ status: 'Import a design (or press Undo) to place it.' });
+      return;
+    }
+    if (!app.selected) app.set({ selected: true });
     if (app.method === 'cylinder') {
       // Tap a limb: pick it and move the design there.
       const limb = limbAt(body, hit);

@@ -24,7 +24,11 @@ npm run dev          # http://localhost:5173
 3. **Place it**: tap the body, then drag the design to move it (mouse or finger). **Auto** follows
    the skin anywhere and wraps around a limb for wide designs; tick **Full band** for a band that
    closes all the way round.
-4. **Size and rotation** in inches, with centimetres shown.
+4. **Resize and rotate on the body**: tap the design to show its box. Drag a corner to resize
+   (keeps proportions), a side dot to stretch one side, the round knob to rotate (Shift snaps to
+   15°). **Delete** or **Backspace** (or the bin button on iPad) removes the design; **Undo** or
+   Ctrl/⌘+Z brings it back; Escape or tapping off the body hides the box. Sliders in the panel
+   show the exact size in inches and centimetres.
 5. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
    share sheet.
 

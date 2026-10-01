@@ -60,11 +60,18 @@ export function Panel() {
         <div className="seg wrap">
           <button className="primary" onClick={() => s.set({ importDialog: { open: true } })}>{s.design.kind === 'image' ? 'Import another…' : 'Import design…'}</button>
           {s.design.original && <button onClick={() => s.set({ importDialog: { open: true, edit: true } })}>Edit background</button>}
-          <button className={s.design.kind === 'checker' ? 'on' : ''} onClick={() => s.set({ design: { kind: 'checker', name: '1-inch checkerboard', aspect: s.widthIn / s.heightIn }, lockAspect: false })}>
+          <button className={s.design.kind === 'checker' ? 'on' : ''} onClick={() => s.set({ design: { kind: 'checker', name: '1-inch checkerboard', aspect: s.widthIn / s.heightIn }, lockAspect: false, selected: true, deleted: null })}>
             1-inch grid
           </button>
         </div>
-        <p className="hint">{s.design.kind === 'image' ? s.design.name : 'PNG, JPG, SVG, PDF or Illustrator. You can also drop a file anywhere on the page.'}</p>
+        <p className="hint">
+          {s.design.kind === 'image'
+            ? `${s.design.name}. Tap it to show the box: drag corners to resize, the round knob to rotate, Delete key or the bin to remove.`
+            : s.design.kind === 'none'
+              ? 'No design on the body.'
+              : 'PNG, JPG, SVG, PDF or Illustrator. You can also drop a file anywhere on the page.'}
+        </p>
+        {s.design.kind === 'none' && s.deleted && <button onClick={() => s.undoDelete()}>Undo delete</button>}
       </Section>
 
       <Section title="Placement">
@@ -72,7 +79,10 @@ export function Panel() {
           {METHOD_NAMES[s.resolved.method]}
           {s.resolved.limbLabel ? ` on the ${s.resolved.limbLabel.toLowerCase()}` : ''}
         </p>
-        <p className="hint">Tap the body to place the design. Drag the design to move it.</p>
+        <p className="hint">
+          Tap the body to place the design and drag it to move. Tap the design for the box: corners resize, side dots stretch, the round knob rotates
+          (Shift snaps to 15°), Delete key or the bin removes it (Ctrl/⌘+Z undoes).
+        </p>
         {s.method !== 'cylinder' && (
           <div className="seg">
             <button className={!s.placement && s.spot === 'forearm' ? 'on' : ''} onClick={() => s.set({ spot: 'forearm', placement: null })}>Outer forearm</button>
@@ -88,8 +98,8 @@ export function Panel() {
 
 
       <Section title="Size and rotation">
-        <Slider label="Width" value={s.widthIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.resolved.method === 'cylinder' && s.band} />
-        <Slider label="Height" value={s.heightIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setHeight} />
+        <Slider label="Width" value={s.widthIn} min={0.25} max={30} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.resolved.method === 'cylinder' && s.band} />
+        <Slider label="Height" value={s.heightIn} min={0.25} max={30} step={0.25} fmt={(v) => `${v} in`} onChange={setHeight} />
         <Slider label="Rotation" value={s.rotationDeg} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ rotationDeg: v })} disabled={s.resolved.method === 'cylinder' && s.band} />
         <Slider label="Opacity" value={s.opacity} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => s.set({ opacity: v })} />
         <div className="checks">

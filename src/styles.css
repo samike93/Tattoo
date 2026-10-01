@@ -181,3 +181,32 @@ details.advanced > summary { cursor: pointer; font-size: 12px; text-transform: u
 details.advanced[open] > summary { margin-bottom: 8px; }
 .metrics { margin-top: 10px; }
 .metrics h3 { margin: 0 0 6px; }
+
+/* On-body selection box */
+.design-box { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.box-handle {
+  position: fixed; left: 0; top: 0; margin: -9px 0 0 -9px; width: 18px; height: 18px; border-radius: 4px;
+  background: #fff; border: 2px solid #2a80ff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  pointer-events: auto; touch-action: none; visibility: hidden;
+}
+/* Bigger invisible touch target */
+.box-handle::after { content: ''; position: absolute; inset: -12px; }
+.box-handle.edge { border-radius: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; }
+.box-handle.h-nw, .box-handle.h-se { cursor: nwse-resize; }
+.box-handle.h-ne, .box-handle.h-sw { cursor: nesw-resize; }
+.box-handle.h-e, .box-handle.h-w { cursor: ew-resize; }
+.box-handle.h-n, .box-handle.h-s { cursor: ns-resize; }
+.box-handle.rotate, .box-handle.trash {
+  width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  color: #2a80ff;
+}
+.box-handle.rotate { cursor: grab; }
+.box-handle.trash { color: #c0362c; border-color: #c0362c; cursor: pointer; min-height: 0; }
+.box-handle svg { width: 18px; height: 18px; }
+
+.toast {
+  position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 4;
+  background: rgba(20, 20, 24, 0.88); color: #fff; padding: 8px 8px 8px 14px; border-radius: 999px;
+  display: flex; gap: 10px; align-items: center; font-size: 13px; max-width: calc(100% - 32px);
+}
+.toast button { background: #fff; color: #111; border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer; font-weight: 600; }

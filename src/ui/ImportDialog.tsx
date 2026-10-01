@@ -204,6 +204,8 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
         design: { kind: 'image', name, aspect, canvas, original, bgOptions: skip ? { mode: 'keep' } : opts },
         heightIn: +(s.widthIn / aspect).toFixed(2),
         lockAspect: true,
+        selected: true,
+        deleted: null,
       });
       onDone();
     } catch (e) {

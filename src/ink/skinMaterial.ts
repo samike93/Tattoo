@@ -34,6 +34,8 @@ export interface SkinUniforms {
   uBand: { value: boolean };
   uOpacity: { value: number };
   uShowRegion: { value: boolean };
+  /** Draw the selection outline around the design. */
+  uSelected: { value: boolean };
   uA: { value: Vector3 };
   uD: { value: Vector3 };
   uE1: { value: Vector3 };
@@ -68,6 +70,7 @@ uniform bool uMirror;
 uniform bool uBand;
 uniform float uOpacity;
 uniform bool uShowRegion;
+uniform bool uSelected;
 uniform vec3 uA, uD, uE1, uE2;
 uniform vec2 uCyl;          // centre t (m), centre angle (rad)
 uniform bool uCylNaive;
@@ -215,6 +218,14 @@ const FRAG_INK = /* glsl */ `
   float on = (uInkMode == 1 && vInkMask > 0.999) || (uInkMode == 2 && vInkMask > 0.5) ? 1.0 : 0.0;
   float a = ink.a * uOpacity * inside * on;
   diffuseColor.rgb *= mix(vec3(1.0), ink.rgb, a);
+  if (uSelected && on > 0.5) {
+    // Selection outline: ~2 px band just inside the design rectangle, following the skin.
+    vec2 fw = abs(gx) + abs(gy) + 1e-6;
+    vec2 edge = min(uv, 1.0 - uv) / fw;
+    float d = uBand ? edge.y : min(edge.x, edge.y);
+    float line = (1.0 - smoothstep(1.5, 2.5, d)) * step(-0.5, d);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.16, 0.5, 1.0), line);
+  }
   if (uShowRegion && uInkMode != 0 && vInkMask > 0.5) diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.15, 0.55, 1.0), 0.18);
 }
 `;
@@ -231,6 +242,7 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     uBand: { value: false },
     uOpacity: { value: 1 },
     uShowRegion: { value: false },
+    uSelected: { value: false },
     uA: { value: new Vector3() },
     uD: { value: new Vector3(0, -1, 0) },
     uE1: { value: new Vector3(0, 0, 1) },
