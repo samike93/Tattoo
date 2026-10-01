@@ -49,6 +49,37 @@ export interface SkinUniforms {
   uSSS: { value: number };
   /** 0 = off, 1 = default. Procedural pores and fine skin variation. */
   uDetail: { value: number };
+  /** Ink look (see INK_LOOKS): spread radius in meters, fade 0..1, redness 0..1, sheen 0..1, darken 0..1. */
+  uInkSpread: { value: number };
+  uInkFade: { value: number };
+  uInkRedness: { value: number };
+  uInkSheen: { value: number };
+  uInkDarken: { value: number };
+}
+
+export type InkLook = 'fresh' | 'healed' | 'aged';
+
+/**
+ * How ink looks at different ages. Ink sits in the dermis under the epidermis; as it heals and ages,
+ * pigment particles migrate a little (lines spread), the epidermis over it softens contrast, and
+ * black carbon ink scatters light so it reads blue-grey (the Tyndall effect). Fresh ink is crisp,
+ * dark, slightly shiny from ointment and plasma, with redness around the lines. Spread is a radius
+ * in real millimetres, so small designs blur relatively more, which is the point of showing it.
+ * Values are tunable estimates from practitioner sources, not measurements.
+ */
+export const INK_LOOKS: Record<InkLook, { spreadMm: number; fade: number; redness: number; sheen: number; darken: number }> = {
+  fresh: { spreadMm: 0.05, fade: 0, redness: 1, sheen: 1, darken: 0.1 },
+  healed: { spreadMm: 0.15, fade: 0.15, redness: 0, sheen: 0, darken: 0 },
+  aged: { spreadMm: 0.4, fade: 0.3, redness: 0, sheen: 0, darken: 0 },
+};
+
+export function setInkLook(u: SkinUniforms, look: InkLook) {
+  const l = INK_LOOKS[look];
+  u.uInkSpread.value = l.spreadMm / 1000;
+  u.uInkFade.value = l.fade;
+  u.uInkRedness.value = l.redness;
+  u.uInkSheen.value = l.sheen;
+  u.uInkDarken.value = l.darken;
 }
 
 const VERT_HEAD = /* glsl */ `
@@ -60,6 +91,7 @@ varying vec3 vObjPos;
 `;
 
 const FRAG_HEAD = /* glsl */ `
+uniform float uInkSpread, uInkFade, uInkRedness, uInkSheen, uInkDarken;
 uniform float uSSS;
 uniform float uDetail;
 uniform sampler2D uInk;
@@ -172,6 +204,8 @@ if (uDetail > 0.0) {
 `;
 
 const FRAG_ROUGH = /* glsl */ `
+// Fresh ink is shiny (ointment, plasma); healed ink takes on the skin's own sheen.
+roughnessFactor = mix(roughnessFactor, roughnessFactor * 0.55, inkCoverage * uInkSheen);
 if (uDetail > 0.0) {
   // Centimetre-scale variation in oiliness and tone, as real skin has.
   float v = skinNoised(vObjPos * 45.0 + 3.0).x;
@@ -189,13 +223,14 @@ if (uDetail > 0.0) {
 // Subsurface scattering approximation: per-channel wrap lighting. Light bleeds past the terminator,
 // red furthest, which gives skin its soft, warm shadow edge instead of a plastic one.
 const SSS_DIFFUSE = /* glsl */ `
-	vec3 sssWrap = uSSS * vec3(0.55, 0.22, 0.12);
+	vec3 sssWrap = uSSS * vec3(0.4, 0.2, 0.12);
 	float sssNL = dot(geometryNormal, directLight.direction);
 	vec3 sssIrradiance = directLight.color * clamp((vec3(sssNL) + sssWrap) / (1.0 + sssWrap), 0.0, 1.0) / (1.0 + 0.5 * sssWrap);
 	reflectedLight.directDiffuse += sssIrradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
 `;
 
 const FRAG_INK = /* glsl */ `
+float inkCoverage = 0.0;
 {
   vec2 xy = vInkCoord;
   float C = 1e6;
@@ -211,13 +246,47 @@ const FRAG_INK = /* glsl */ `
   dy.x -= C * floor(dy.x / C + 0.5);
   vec2 uv = toDesign(xy, C, false);
   vec2 gx = toDesign(dx, C, true), gy = toDesign(dy, C, true);
-  vec4 ink = textureGrad(uInk, uv, gx, gy);
   float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
   // Mode 1 needs all three vertices of the triangle reached (an interpolated mask of exactly 1);
   // otherwise the coordinates would blend with unreached vertices and smear the design.
   float on = (uInkMode == 1 && vInkMask > 0.999) || (uInkMode == 2 && vInkMask > 0.5) ? 1.0 : 0.0;
+  // Ink spread, in real millimetres converted to design UV: a 9-tap disc blur of that radius
+  // (smooth, unlike leaning on coarse mip levels, which looks blocky), each tap filtered at a
+  // third of the radius.
+  vec2 spreadUV = uInkSpread / vec2(uBand ? C : uSize.x, uSize.y);
+  float footprint = max(length(gx), length(gy)) + 1e-9;
+  vec4 ink = vec4(0.0);
+  if (inside * on < 0.5) {
+    // Outside the design: no texture reads at all (most of the body, most of the time).
+  } else if (max(spreadUV.x, spreadUV.y) > 0.75 * footprint) {
+    float widen = max(1.0, 0.66 * max(spreadUV.x, spreadUV.y) / footprint);
+    ink = 0.2 * textureGrad(uInk, uv, gx * widen, gy * widen);
+    for (int k = 0; k < 8; k++) {
+      float ang = 0.785398 * float(k) + 0.39;
+      vec2 o = vec2(cos(ang), sin(ang)) * spreadUV * (k % 2 == 0 ? 0.55 : 0.95);
+      ink += 0.1 * textureGrad(uInk, uv + o, gx * widen, gy * widen);
+    }
+  } else {
+    ink = textureGrad(uInk, uv, gx, gy);
+  }
   float a = ink.a * uOpacity * inside * on;
-  diffuseColor.rgb *= mix(vec3(1.0), ink.rgb, a);
+  // Age: blacks lift toward blue-grey (Tyndall), colours desaturate, overall strength fades a little.
+  float inkLum = dot(ink.rgb, vec3(0.2126, 0.7152, 0.0722));
+  vec3 inkRgb = mix(ink.rgb, vec3(inkLum), 0.6 * uInkFade);
+  inkRgb = mix(inkRgb, vec3(0.085, 0.11, 0.16), uInkFade * (1.0 - smoothstep(0.0, 0.25, inkLum)));
+  inkRgb *= 1.0 - uInkDarken;
+  a *= 1.0 - 0.25 * uInkFade;
+  diffuseColor.rgb *= mix(vec3(1.0), inkRgb, a);
+  inkCoverage = a;
+  if (uInkRedness > 0.0 && inside * on > 0.5) {
+    // Fresh: irritated skin around the linework (a wide, soft halo outside the ink).
+    // Same texture, sampled with a ~1.5 mm radius footprint.
+    vec2 haloUV = 2.0 * 0.0015 / vec2(uBand ? C : uSize.x, uSize.y);
+    float haloWiden = max(1.0, max(haloUV.x, haloUV.y) / footprint);
+    float wide = textureGrad(uInk, uv, gx * haloWiden, gy * haloWiden).a;
+    float halo = uInkRedness * smoothstep(0.02, 0.35, wide * inside * on) * (1.0 - a);
+    diffuseColor.rgb *= mix(vec3(1.0), vec3(1.0, 0.8, 0.78), 0.45 * halo);
+  }
   if (uSelected && on > 0.5) {
     // Selection outline: ~2 px band just inside the design rectangle, following the skin.
     vec2 fw = abs(gx) + abs(gy) + 1e-6;
@@ -254,6 +323,11 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     uTableInfo: { value: new Vector4(0, 1, 2, 2) },
     uSSS: { value: 1 },
     uDetail: { value: 1 },
+    uInkSpread: { value: 0.0003 },
+    uInkFade: { value: 0.18 },
+    uInkRedness: { value: 0 },
+    uInkSheen: { value: 0 },
+    uInkDarken: { value: 0 },
   };
   const material = new MeshPhysicalMaterial({
     color: new Color(color),
@@ -279,7 +353,7 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + FRAG_ROUGH)
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_PORES);
   };
-  material.customProgramCacheKey = () => 'tattoo-skin-v2';
+  material.customProgramCacheKey = () => 'tattoo-skin-v3';
   return { material, uniforms };
 }
 

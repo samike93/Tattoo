@@ -7,13 +7,17 @@ import {
   Mesh,
   MeshStandardMaterial,
   PMREMGenerator,
+  NeutralToneMapping,
+  PCFSoftShadowMap,
+  DirectionalLight,
+  MeshBasicMaterial,
   Raycaster,
   SRGBColorSpace,
   Vector3,
   BufferGeometry,
   type Texture,
 } from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { buildEnvironmentScene, DIRECT_LIGHTS } from './environment';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { fetchRawBody, hitFromIntersection, prepareBody, raycastBody, type LoadedBody, type RawBody, type SurfaceHit } from '../body/loadBody';
@@ -25,7 +29,7 @@ import type { DistortionStats } from '../projection/distortion';
 import { cylinderSamples, measureSamples, vertexCoordSamples } from '../projection/evaluate';
 import { computeExpMapAsync, setExpMapSurface } from '../projection/expmapClient';
 import { chooseMethod, limbAt, type AutoChoice } from '../placement/resolve';
-import { createSkinMaterial, setCylinderUniforms, setDesignUniforms } from '../ink/skinMaterial';
+import { createSkinMaterial, setCylinderUniforms, setDesignUniforms, setInkLook } from '../ink/skinMaterial';
 import { drawChecker } from '../phase0/checker';
 import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
@@ -96,7 +100,7 @@ export function Scene() {
 
   return (
     <>
-      <Lights />
+      <Lights height={body?.skeleton.height_m ?? 1.75} />
       <CameraRig body={body} />
       {body && <Body body={body} />}
       <FrameStats />
@@ -107,24 +111,92 @@ export function Scene() {
   );
 }
 
-function Lights() {
+function Lights({ height }: { height: number }) {
   const { gl, scene } = useThree();
+  const preset = useApp((s) => s.lighting);
+  const L = DIRECT_LIGHTS[preset];
   useEffect(() => {
-    // Procedural studio environment: no HDR download, works offline.
+    // Procedural environment: no HDR download, works offline (ui/environment.ts).
     const pmrem = new PMREMGenerator(gl);
-    const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+    const envScene = buildEnvironmentScene(preset);
+    const env = pmrem.fromScene(envScene, 0.035).texture;
     scene.environment = env;
-    scene.environmentIntensity = 0.75;
+    scene.environmentIntensity = L.env;
+    // Khronos PBR Neutral tone mapping keeps skin and ink colours true (made for product colour).
+    gl.toneMapping = NeutralToneMapping;
+    gl.toneMappingExposure = L.exposure;
+    gl.shadowMap.enabled = true;
+    gl.shadowMap.type = PCFSoftShadowMap;
     return () => {
       env.dispose();
       pmrem.dispose();
+      envScene.traverse((o) => {
+        const m = o as Mesh;
+        m.geometry?.dispose();
+        (m.material as MeshBasicMaterial | undefined)?.dispose?.();
+      });
     };
-  }, [gl, scene]);
+  }, [gl, scene, preset, L.env, L.exposure]);
+  const keyRef = useRef<DirectionalLight>(null);
+  useEffect(() => {
+    // Shadow camera sized to the body, so the floor shadow is sharp enough and cheap.
+    const k = keyRef.current;
+    if (!k) return;
+    const cam = k.shadow.camera;
+    cam.left = -1.2;
+    cam.right = 1.2;
+    cam.top = height + 0.3;
+    cam.bottom = -0.5;
+    cam.near = 0.5;
+    cam.far = 12;
+    cam.updateProjectionMatrix();
+    k.target.position.set(0, height / 2, 0);
+    k.target.updateMatrixWorld();
+  }, [height, preset]);
   return (
     <>
-      <directionalLight position={[1.5, 3, 2.5]} intensity={1.6} color="#fff4ea" />
-      <directionalLight position={[-2, 1.5, -2]} intensity={0.6} color="#dfe8ff" />
-      <hemisphereLight args={['#ffffff', '#5a4d45', 0.35]} />
+      <directionalLight
+        ref={keyRef}
+        position={L.key.pos}
+        intensity={L.key.intensity}
+        color={L.key.color}
+        castShadow
+        shadow-mapSize-width={1024}
+        shadow-mapSize-height={1024}
+        shadow-radius={6}
+        shadow-bias={-0.0005}
+      />
+      <directionalLight position={L.fill.pos} intensity={L.fill.intensity} color={L.fill.color} />
+      <ContactFloor />
+    </>
+  );
+}
+
+/** Soft shadow and a contact darkening under the feet, so the body stands on something. */
+function ContactFloor() {
+  const blob = useMemo(() => {
+    const c = document.createElement('canvas');
+    c.width = c.height = 128;
+    const g = c.getContext('2d')!;
+    const grad = g.createRadialGradient(64, 64, 4, 64, 64, 64);
+    grad.addColorStop(0, 'rgba(0,0,0,0.55)');
+    grad.addColorStop(0.5, 'rgba(0,0,0,0.22)');
+    grad.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = grad;
+    g.fillRect(0, 0, 128, 128);
+    return new CanvasTexture(c);
+  }, []);
+  useEffect(() => () => blob.dispose(), [blob]);
+  return (
+    <>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.001, 0]} receiveShadow>
+        <planeGeometry args={[6, 6]} />
+        <shadowMaterial opacity={0.28} />
+      </mesh>
+      <mesh rotation-x={-Math.PI / 2} position={[0, 0.002, 0.02]} scale={[0.9, 0.55, 1]}>
+        <planeGeometry args={[1, 1]} />
+        <meshBasicMaterial map={blob} transparent depthWrite={false} />
+      </mesh>
     </>
   );
 }
@@ -263,7 +335,7 @@ function FrameStats() {
 
 type Shared = Pick<
   AppState,
-  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone' | 'skinDetail' | 'selected'
+  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone' | 'skinDetail' | 'selected' | 'inkLook'
 >;
 
 function Body({ body }: { body: LoadedBody }) {
@@ -283,7 +355,7 @@ function Body({ body }: { body: LoadedBody }) {
   const shared = useApp(useShallow((s: AppState): Shared => ({
     method: s.method, limbId: s.limbId, cylMode: s.cylMode, band: s.band, slide: s.slide, around: s.around,
     placement: s.placement, spot: s.spot, widthIn: s.widthIn, heightIn: s.heightIn, rotationDeg: s.rotationDeg, mirror: s.mirror,
-    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone, skinDetail: s.skinDetail, selected: s.selected,
+    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone, skinDetail: s.skinDetail, selected: s.selected, inkLook: s.inkLook,
   })));
 
   const frameFor = (id: string) => {
@@ -316,6 +388,7 @@ function Body({ body }: { body: LoadedBody }) {
       uniforms.uDetail.value = shared.skinDetail ? 1 : 0;
       uniforms.uSSS.value = shared.skinDetail ? 1 : 0;
       uniforms.uSelected.value = shared.selected;
+      setInkLook(uniforms, shared.inkLook);
       if (shared.design.kind === 'none') {
         // Deleted: bare skin, no box.
         uniforms.uInkMode.value = 0;
@@ -403,9 +476,10 @@ function Body({ body }: { body: LoadedBody }) {
         });
         app.setTiming('placementMs', performance.now() - t0);
         if (!framedOnce && focus) {
-          // Open on the design, not the whole body: the placement is the point of the page.
+          // Open on the design, not the whole body: the placement is the point of the page. But
+          // never override a view the user (or a link) already picked while the body was loading.
           framedOnce = true;
-          app.requestCamera('design');
+          if (useApp.getState().camera.nonce === 0) app.requestCamera('design');
         }
       };
 
@@ -619,6 +693,7 @@ function Body({ body }: { body: LoadedBody }) {
         ref={meshRef}
         geometry={body.geometry}
         material={material}
+        castShadow
         onClick={onClick}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

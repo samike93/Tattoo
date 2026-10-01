@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { exportImage, EXPORT_LONG_SIDE, type ExportView } from './Exporter';
 import { localRange } from '../body/shape';
+import { SKIN_PRESETS, skinHex } from '../ink/skinTone';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
 import { useShallow } from 'zustand/react/shallow';
@@ -19,7 +20,6 @@ const SHAPE_CONTROLS: { id: string; label: string; less: string; more: string }[
   { id: 'calves', label: 'Calves', less: 'Slimmer', more: 'Fuller' },
 ];
 
-const SKIN_TONES = ['#f4d8c4', '#e9bf9f', '#d9a57e', '#b47b52', '#8a5636', '#5c3720', '#3b2214'];
 
 const METHODS: { id: Method; label: string; hint: string }[] = [
   { id: 'auto', label: 'Auto (recommended)', hint: 'Follows the skin anywhere, and wraps around a limb when the design is wide or a full band.' },
@@ -88,11 +88,38 @@ export function Panel() {
           </button>
         </details>
         <div className="swatches" role="radiogroup" aria-label="Skin tone">
-          {SKIN_TONES.map((c) => (
-            <button key={c} aria-label={`Skin tone ${c}`} className={s.skinTone === c ? 'on' : ''} style={{ background: c }} onClick={() => s.set({ skinTone: c })} />
-          ))}
-          <input type="color" aria-label="Custom skin tone" value={s.skinTone} onChange={(e) => s.set({ skinTone: e.target.value })} />
+          {SKIN_PRESETS.map((t, i) => {
+            const hex = skinHex({ melanin: t.melanin, undertone: s.skinUndertone });
+            return (
+              <button
+                key={i}
+                aria-label={`Skin tone ${i + 1} of ${SKIN_PRESETS.length}`}
+                className={Math.abs(s.skinMelanin - t.melanin) < 0.01 && s.skinTone === hex ? 'on' : ''}
+                style={{ background: hex }}
+                onClick={() => s.set({ skinMelanin: t.melanin, skinTone: hex })}
+              />
+            );
+          })}
+          <input type="color" aria-label="Custom skin colour" title="Custom colour" value={s.skinTone} onChange={(e) => s.set({ skinTone: e.target.value })} />
         </div>
+        <Slider
+          label="Skin tone"
+          value={s.skinMelanin}
+          min={0}
+          max={1}
+          step={0.01}
+          fmt={(v) => (v < 0.15 ? 'Very light' : v < 0.3 ? 'Light' : v < 0.45 ? 'Medium' : v < 0.6 ? 'Tan' : v < 0.8 ? 'Brown' : 'Dark')}
+          onChange={(v) => s.set({ skinMelanin: v, skinTone: skinHex({ melanin: v, undertone: s.skinUndertone }) })}
+        />
+        <Slider
+          label="Undertone"
+          value={s.skinUndertone}
+          min={-1}
+          max={1}
+          step={0.05}
+          fmt={(v) => (v < -0.25 ? 'Cool (pink)' : v > 0.25 ? 'Warm (golden)' : 'Neutral')}
+          onChange={(v) => s.set({ skinUndertone: v, skinTone: skinHex({ melanin: s.skinMelanin, undertone: v }) })}
+        />
       </Section>
 
       <Section title="Design">
@@ -146,9 +173,27 @@ export function Panel() {
           <label className="check"><input type="checkbox" checked={s.mirror} onChange={(e) => s.set({ mirror: e.target.checked })} /> Mirror</label>
         </div>
         <p className="size">{formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
+        <div className="seg" role="radiogroup" aria-label="Ink look">
+          {(['fresh', 'healed', 'aged'] as const).map((l) => (
+            <button key={l} className={s.inkLook === l ? 'on' : ''} onClick={() => s.set({ inkLook: l })}>
+              {l === 'fresh' ? 'Fresh' : l === 'healed' ? 'Healed' : 'Aged 10+ yrs'}
+            </button>
+          ))}
+        </div>
+        <p className="hint">
+          {s.inkLook === 'fresh'
+            ? 'Just done: crisp, dark, a little shiny, with redness around the lines.'
+            : s.inkLook === 'healed'
+              ? 'After healing: lines soften by about 0.3 mm and blacks settle to a softer black.'
+              : 'Years later: lines spread about 0.8 mm and blacks go blue-grey. Small details close up first. An estimate, not a promise.'}
+        </p>
       </Section>
 
       <Section title="View">
+        <div className="seg" role="radiogroup" aria-label="Lighting">
+          <button className={s.lighting === 'studio' ? 'on' : ''} onClick={() => s.set({ lighting: 'studio' })}>Studio light</button>
+          <button className={s.lighting === 'shop' ? 'on' : ''} onClick={() => s.set({ lighting: 'shop' })}>Shop light</button>
+        </div>
         <div className="seg wrap">
           {(['front', 'back', 'left', 'right', 'design', 'opposite'] as const).map((p) => (
             <button key={p} onClick={() => s.requestCamera(p)}>

@@ -15,8 +15,11 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-1. **Body**: male or female, the client's height in feet and inches, build, muscle, skin tone.
-   Shapes come from the Anny body model, so a taller client really is taller, not just scaled.
+1. **Body**: male or female, the client's height in feet and inches, build, muscle, and under
+   **Body shape**: belly, bust, bust lift, hips, buttocks, thighs, thigh gap, upper arms and calves.
+   Skin tone follows the dermatology skin-colour scale (very light to very dark) with a cool/warm
+   undertone, or pick any custom colour. Shapes come from the Anny body model, so a taller client
+   really is taller, not just scaled.
 2. **Import design**: PNG, JPG, WEBP, SVG, PDF or Illustrator `.ai` (or drop a file anywhere on the
    page). Multi-page PDFs and multi-artboard `.ai` files let you pick a page. The background is
    removed automatically, with a before/after preview and controls; **Download PNG** saves the
@@ -29,7 +32,9 @@ npm run dev          # http://localhost:5173
    15°). **Delete** or **Backspace** (or the bin button on iPad) removes the design; **Undo** or
    Ctrl/⌘+Z brings it back; Escape or tapping off the body hides the box. Sliders in the panel
    show the exact size in inches and centimetres.
-5. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
+5. **Ink look**: Fresh (just done), Healed (default) or Aged 10+ years, to show how fine lines and
+   small lettering will hold up. **Studio light** or **Shop light** under View.
+6. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
    share sheet.
 
 The **1-inch grid** design is still there for checking accuracy, and **Method (advanced)** at the

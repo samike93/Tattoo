@@ -48,6 +48,12 @@ const state = () => page.evaluate(() => {
 });
 const ready = () => page.waitForFunction(() => window.tattoo?.get().status === 'Ready', null, { timeout: 60000 });
 const settle = (ms = 800) => page.waitForTimeout(ms);
+/** Wait for real rendered frames (the software GPU in CI can run at a few frames per second). */
+const frames = (n = 3) => page.evaluate((n) => new Promise((r) => { const step = (k) => (k ? requestAnimationFrame(() => step(k - 1)) : r()); step(n); }), n);
+const camera = async (preset) => {
+  await page.evaluate((c) => window.tattoo.get().requestCamera(c), preset);
+  await frames(3);
+};
 let failures = 0;
 const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`);
@@ -155,8 +161,7 @@ try {
   check('dragging the design moves it along the skin', moved > 0.02 && s.resolved.method === 'expmap', `moved ${(moved * 100).toFixed(1)} cm`);
 
   // Tap the back: surface wrap, no limb.
-  await page.evaluate(() => window.tattoo.get().requestCamera('back'));
-  await settle(800);
+  await camera('back');
   const back = await page.evaluate(() => {
     const s = window.tattoo.get();
     return window.tattoo.project([0.06, s.focus ? 1.35 : 1.35, -0.2]);
@@ -253,7 +258,7 @@ try {
   await page.keyboard.press('Escape');
 
   // Export a high-resolution front view.
-  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.getByRole('button', { name: 'Front', exact: true }).last().click()]);
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.getByRole('button', { name: 'Front', exact: true }).last().click()]);
   const file = `${OUT}/e2e-export-front.png`;
   await download.saveAs(file);
   const dims = await page.evaluate(async (b64) => {

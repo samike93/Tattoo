@@ -111,3 +111,36 @@ set can replace the noise later without touching the ink code.
 
 Wrong file types and old `.ai` files are explained in the import dialog. Only unexpected failures go
 to the debug panel's error list, so the list stays useful for troubleshooting.
+
+### 2026-10-01: Body-shape controls from Anny's local changes (after Gemini's review)
+
+Belly, bust, bust lift, hips, buttocks, thighs, thigh gap, upper arms and calves. Gemini suggested
+MakeHuman's MHAPI and `morphTargetInfluences`; neither fits: the exporter uses Anny, and shapes must
+be baked on the CPU because the wrapping math needs the real vertex positions. Anny's local changes
+are exactly linear on each side of 0 and independent of height/weight/muscle (0.00 mm), so each
+control is two sparse glTF morph targets (+1/-1) plus joint offsets. GLB 3.76 → 4.0 MB. Thigh gap has
+no Anny target; a mix of pelvis width, thigh width and leg angle opens it from 5.1 to 7.9 cm, and
+the closed end stops at -0.7 so thighs never overlap even at maximum build (tested).
+
+### 2026-10-01: Skin colour on the dermatology ITA scale, not a physics model
+
+Gemini proposed a melanin LUT. A three-wavelength two-layer skin model (melanin over haemoglobin)
+could not match real skin colours (light skin too pink, dark skin orange) without full spectral
+integration, so skin colour follows typical CIELAB values along the Individual Typology Angle scale
+used in dermatology (very light > 55° ... dark < -30°), with an undertone slider (cool/pink to
+warm/golden). Albedos are now real skin reflectance, darker than the old swatches; lighting and
+Khronos PBR Neutral tone mapping compensate.
+
+### 2026-10-01: Fresh / healed / aged ink
+
+Ink spread is a radius in real millimetres (fresh 0.05, healed 0.15, aged 0.4), done as a 9-tap disc
+blur rather than a mip bias (which looked blocky and ignores the design's real size), so small
+lettering blurs out before large shapes, which is what the client needs to see. Aged blacks shift
+toward blue-grey (Tyndall), colours desaturate. Ink still multiplies into the skin (Gemini's snippet
+painted it on top). Fresh adds sheen and redness around the lines. Estimates, labelled as such.
+
+### 2026-10-01: Procedural studio and shop lighting, floor shadow
+
+Poly Haven HDRIs are CC0 but the download was blocked here, and a runtime download would break
+offline use, so the environment is built in code: a portrait-studio softbox setup (default) and an
+overhead-fluorescent "shop" setup. A shadow-casting key light and a soft contact blob ground the body.

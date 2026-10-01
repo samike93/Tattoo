@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { skinHex } from './ink/skinTone';
 import type { BodyId } from './body/skeleton';
 import type { CylMode } from './projection/cylindrical';
 import type { DistortionStats } from './projection/distortion';
@@ -42,7 +43,11 @@ export interface AppState {
   bodyMuscle: number;
   /** Body-shape controls (belly, bust, thighs...) by id, each -1..1, 0 = average. */
   bodyLocal: Record<string, number>;
+  /** Skin colour actually used (sRGB hex). Set from melanin/undertone, or by the custom picker. */
   skinTone: string;
+  /** Position on the skin-colour scale (0 very light .. 1 very dark) and undertone (-1 cool .. 1 warm). */
+  skinMelanin: number;
+  skinUndertone: number;
   method: Method;
   limbId: string;
   cylMode: CylMode;
@@ -66,6 +71,10 @@ export interface AppState {
   wireframe: boolean;
   /** Pores and subsurface glow (turn off on slow devices). */
   skinDetail: boolean;
+  /** Studio (flattering, default) or shop (overhead fluorescent) lighting. */
+  lighting: 'studio' | 'shop';
+  /** How the ink is shown: fresh (just done), healed (default), aged (10+ years). */
+  inkLook: 'fresh' | 'healed' | 'aged';
   debugOpen: boolean;
   ui: boolean;
   /** The design is selected: shows the on-body box with resize, rotate and delete handles. */
@@ -105,7 +114,9 @@ export const useApp = create<AppState>((set) => ({
   bodyWeight: 0.5,
   bodyMuscle: 0.5,
   bodyLocal: {},
-  skinTone: '#d9a57e',
+  skinTone: skinHex({ melanin: 0.33, undertone: 0 }),
+  skinMelanin: 0.33,
+  skinUndertone: 0,
   method: 'auto',
   limbId: 'forearm.L',
   cylMode: 'arc',
@@ -124,6 +135,8 @@ export const useApp = create<AppState>((set) => ({
   showRegion: false,
   wireframe: false,
   skinDetail: true,
+  inkLook: 'healed',
+  lighting: 'studio',
   debugOpen: false,
   ui: true,
   importDialog: { open: false },
@@ -160,8 +173,8 @@ export const useApp = create<AppState>((set) => ({
 
 /** State that goes into a share link (everything except uploaded images and readouts). */
 const LINK_KEYS = [
-  'bodyId', 'clientHeight', 'bodyWeight', 'bodyMuscle', 'skinTone', 'method', 'limbId', 'cylMode', 'band', 'slide', 'around', 'spot',
-  'widthIn', 'heightIn', 'rotationDeg', 'mirror', 'opacity', 'showRegion', 'wireframe', 'skinDetail', 'debugOpen', 'ui',
+  'bodyId', 'clientHeight', 'bodyWeight', 'bodyMuscle', 'skinTone', 'skinMelanin', 'skinUndertone', 'method', 'limbId', 'cylMode', 'band', 'slide', 'around', 'spot',
+  'widthIn', 'heightIn', 'rotationDeg', 'mirror', 'opacity', 'showRegion', 'wireframe', 'skinDetail', 'inkLook', 'lighting', 'debugOpen', 'ui',
 ] as const;
 
 export function stateToHash(s: AppState): string {
@@ -183,6 +196,13 @@ export function hashToState(hash: string): Partial<AppState> {
     const d = defaults[k];
     out[k] = typeof d === 'number' ? Number(v) : typeof d === 'boolean' ? v === 'true' : v;
     if (typeof d === 'number' && !Number.isFinite(out[k] as number)) delete out[k];
+  }
+  // A link with a skin-scale position but no explicit colour gets the colour from the scale.
+  if ((p.has('skinMelanin') || p.has('skinUndertone')) && !p.has('skinTone')) {
+    out.skinTone = skinHex({
+      melanin: Number(p.get('skinMelanin') ?? defaults.skinMelanin),
+      undertone: Number(p.get('skinUndertone') ?? defaults.skinUndertone),
+    });
   }
   const shape = p.get('shape');
   if (shape) {
