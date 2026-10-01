@@ -24,10 +24,10 @@ What we **did not** use:
   Anny cache used for the export contains no `noncommercial/` files.
 - **Not Anny's `soma` topology** (Apache 2.0 from NVIDIA SOMA-X, allowed, but not needed).
 
-What the GLBs contain: the skin surface only (eye backs, eye sockets, mouth cavity and tongue are
+What the GLBs contain: the skin surface only, with elbows straightened (our own posing step), (eye backs, eye sockets, mouth cavity and tongue are
 removed), positions in meters, smooth normals, Anny/MakeHuman UVs, the original vertex id
-(`_VID`) and the dominant skinning bone (`_BONE`). The skeleton JSON has bone names, parents and
-joint positions.
+(`_VID`), the dominant skinning bone (`_BONE`), and 18 morph targets for Anny's
+height/weight/muscle grid. The skeleton JSON has bone names, parents and joint positions for each.
 
 Attribution is not required by CC0 or for Apache 2.0 output data, but we credit Anny and the
 MakeHuman community in the app's About text and in this repo as a courtesy. If the Anny code is ever
@@ -38,7 +38,7 @@ bundled (it is not; it only runs offline in `tools/`), its Apache 2.0 NOTICE ter
 
 ## npm dependencies (production)
 
-Checked with `node scripts/check-licenses.mjs` (19 packages: 18 MIT, 1 BSD-3-Clause). Main ones:
+Checked with `node scripts/check-licenses.mjs` (22 packages: 20 MIT, 1 Apache-2.0, 1 BSD-3-Clause). Main ones:
 
 | Package | License |
 |---|---|
@@ -47,6 +47,7 @@ Checked with `node scripts/check-licenses.mjs` (19 packages: 18 MIT, 1 BSD-3-Cla
 | @react-three/fiber | MIT |
 | three-mesh-bvh | MIT |
 | zustand | MIT |
+| pdfjs-dist (PDF and .ai import, loaded only when needed) | Apache 2.0 |
 
 `@react-three/drei` was removed in Phase 0: it pulled in `webgl-constants`, which has no license
 field, plus many unused modules. We use three.js's own `OrbitControls` instead.
@@ -57,5 +58,5 @@ Dev-only tools (vite, vitest, typescript, playwright-core) are MIT or Apache 2.0
 
 | Thing | License | Decision |
 |---|---|---|
-| `@imgly/background-removal` | AGPL-3.0 | Not used. Phase 1 uses a tuned classic image pipeline instead. |
+| `@imgly/background-removal` | AGPL-3.0 | Not used. Phase 1 ships a tuned classic image pipeline instead (`src/bgremove/`). |
 | SMPL family | Non-commercial | Not used (see above). |

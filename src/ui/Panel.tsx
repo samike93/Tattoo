@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
+import { exportImage, EXPORT_LONG_SIDE, type ExportView } from './Exporter';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
@@ -108,6 +109,7 @@ export function Panel() {
         </div>
         <div className="checks">
           <label className="check"><input type="checkbox" checked={s.showRegion} onChange={(e) => s.set({ showRegion: e.target.checked })} /> Show wrap region</label>
+          <label className="check"><input type="checkbox" checked={s.skinDetail} onChange={(e) => s.set({ skinDetail: e.target.checked })} /> Skin detail</label>
           <label className="check"><input type="checkbox" checked={s.wireframe} onChange={(e) => s.set({ wireframe: e.target.checked })} /> Wireframe</label>
         </div>
       </Section>
@@ -154,8 +156,54 @@ export function Panel() {
   );
 }
 
+const EXPORTS: { view: ExportView; label: string }[] = [
+  { view: 'current', label: 'This view' },
+  { view: 'front', label: 'Front' },
+  { view: 'back', label: 'Back' },
+  { view: 'design', label: 'Close-up' },
+];
+
 function Export() {
-  return null;
+  const [busy, setBusy] = useState<ExportView | null>(null);
+  const [note, setNote] = useState('');
+  const save = async (view: ExportView) => {
+    setBusy(view);
+    setNote('');
+    try {
+      const blob = await exportImage(view);
+      const name = `tattoo-preview-${view === 'design' ? 'close-up' : view}-${new Date().toISOString().slice(0, 10)}.png`;
+      const file = new File([blob], name, { type: 'image/png' });
+      // On iPad and phones, the share sheet saves to Photos or sends to the client directly.
+      const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+      if (nav.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+        await navigator.share({ files: [file], title: 'Tattoo preview' });
+        setNote('Shared.');
+      } else {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+        setNote(`Saved ${name} (${EXPORT_LONG_SIDE} px).`);
+      }
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setNote(`Couldn’t save the image: ${(e as Error).message}`);
+    } finally {
+      setBusy(null);
+    }
+  };
+  return (
+    <Section title="Save images">
+      <div className="seg wrap">
+        {EXPORTS.map((x) => (
+          <button key={x.view} onClick={() => save(x.view)} disabled={busy !== null}>
+            {busy === x.view ? 'Saving…' : x.label}
+          </button>
+        ))}
+      </div>
+      <p className="hint">{note || `High-resolution PNG, ${EXPORT_LONG_SIDE} px on the long side.`}</p>
+    </Section>
+  );
 }
 
 function Metrics() {

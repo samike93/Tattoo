@@ -100,6 +100,21 @@ export function runStudy(body: LoadedBody): StudyRow[] {
     }
   }
 
+  // 2c) How far round a limb can the surface wrap go? Outer forearm, 3 in tall, widening.
+  {
+    const C = ringCircumference(f, tMid);
+    const hit = limbSurfacePoint(body, mesh, f, tMid, Math.PI / 2);
+    for (const w of [3, 4, 5, 6, 7]) {
+      const tfw = patch(w, 3);
+      const scenario = `Forearm outer, ${w}×3 in (${Math.round((100 * tfw.width) / C)}% of circumference)`;
+      if (hit) {
+        const em = computeExpMap(body.surface, hit, [0, 1, 0], expmapRadius(tfw));
+        rows.push({ body: body.id, scenario, method: 'Exponential map', stats: measureSamples(vertexCoordSamples(body.surface, em.coords, tfw), tfw) });
+      }
+      rows.push({ body: body.id, scenario, method: 'Cylindrical, fitted axis (arc length)', stats: measureSamples(cylinderSamples(body.surface, f, { centerT: tMid, centerAngle: Math.PI / 2, mode: 'arc' }, tfw), tfw) });
+    }
+  }
+
   // 3) Shoulder blade, 4 x 4 in.
   {
     const tfb = patch(4, 4);

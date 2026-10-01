@@ -5,6 +5,7 @@ import {
   MeshPhysicalMaterial,
   NearestFilter,
   RGBAFormat,
+  ShaderChunk,
   Texture,
   Vector2,
   Vector3,
@@ -42,6 +43,10 @@ export interface SkinUniforms {
   uTable: { value: DataTexture | null };
   uCenters: { value: DataTexture | null };
   uTableInfo: { value: Vector4 };
+  /** 0 = off, 1 = default. Subsurface scattering approximation (per-channel wrap lighting). */
+  uSSS: { value: number };
+  /** 0 = off, 1 = default. Procedural pores and fine skin variation. */
+  uDetail: { value: number };
 }
 
 const VERT_HEAD = /* glsl */ `
@@ -53,6 +58,8 @@ varying vec3 vObjPos;
 `;
 
 const FRAG_HEAD = /* glsl */ `
+uniform float uSSS;
+uniform float uDetail;
 uniform sampler2D uInk;
 uniform int uInkMode;
 uniform vec2 uSize;
@@ -124,6 +131,67 @@ vec2 toDesign(vec2 xy, float C, bool lin) {
 }
 `;
 
+// Procedural skin detail: value noise with analytic derivatives (Inigo Quilez), in object space
+// (meters), so pores keep their real size whatever the body shape or camera distance.
+const FRAG_NOISE = /* glsl */ `
+float skinHash(vec3 p) {
+  p = fract(p * 0.1031);
+  p += dot(p, p.zyx + 31.32);
+  return fract((p.x + p.y) * p.z);
+}
+vec4 skinNoised(vec3 x) {
+  vec3 i = floor(x), w = fract(x);
+  vec3 u = w * w * (3.0 - 2.0 * w), du = 6.0 * w * (1.0 - w);
+  float a = skinHash(i), b = skinHash(i + vec3(1, 0, 0)), c = skinHash(i + vec3(0, 1, 0)), d = skinHash(i + vec3(1, 1, 0));
+  float e = skinHash(i + vec3(0, 0, 1)), f = skinHash(i + vec3(1, 0, 1)), g = skinHash(i + vec3(0, 1, 1)), h = skinHash(i + vec3(1, 1, 1));
+  float k1 = b - a, k2 = c - a, k3 = e - a, k4 = a - b - c + d, k5 = a - c - e + g, k6 = a - b - e + f, k7 = -a + b + c - d + e - f - g + h;
+  return vec4(a + k1 * u.x + k2 * u.y + k3 * u.z + k4 * u.x * u.y + k5 * u.y * u.z + k6 * u.z * u.x + k7 * u.x * u.y * u.z,
+    du * vec3(k1 + k4 * u.y + k6 * u.z + k7 * u.y * u.z, k2 + k5 * u.z + k4 * u.x + k7 * u.z * u.x, k3 + k6 * u.x + k5 * u.y + k7 * u.x * u.y));
+}
+`;
+
+// Pores (~1.1 mm apart) and fine bumps perturb the shading normal. They fade out when a pore is
+// smaller than a pixel, which would otherwise shimmer. Applied after the ink, so the skin's surface
+// texture stays on top of the ink, as in a real tattoo.
+const FRAG_PORES = /* glsl */ `
+if (uDetail > 0.0) {
+  const float PORE_FREQ = 900.0;   // cycles per meter
+  const float BUMP_FREQ = 210.0;
+  vec4 n1 = skinNoised(vObjPos * PORE_FREQ);
+  vec4 n2 = skinNoised(vObjPos * BUMP_FREQ + 11.0);
+  float footprint = length(fwidth(vObjPos)) * PORE_FREQ;
+  float fade = 1.0 - smoothstep(0.45, 1.1, footprint);
+  // Slopes: pores ~35 micron deep, bumps ~60 micron.
+  vec3 g = (0.035e-3 * PORE_FREQ * fade) * n1.yzw + (0.06e-3 * BUMP_FREQ) * n2.yzw;
+  vec3 gv = (viewMatrix * vec4(g, 0.0)).xyz * uDetail;
+  normal = normalize(normal - (gv - dot(gv, normal) * normal));
+}
+`;
+
+const FRAG_ROUGH = /* glsl */ `
+if (uDetail > 0.0) {
+  // Centimetre-scale variation in oiliness and tone, as real skin has.
+  float v = skinNoised(vObjPos * 45.0 + 3.0).x;
+  roughnessFactor = clamp(roughnessFactor * (0.9 + 0.2 * v * uDetail), 0.05, 1.0);
+}
+`;
+
+const FRAG_TONE = /* glsl */ `
+if (uDetail > 0.0) {
+  float t = skinNoised(vObjPos * 28.0 + 7.0).x - 0.5;
+  diffuseColor.rgb *= 1.0 + uDetail * vec3(0.05, 0.035, 0.03) * t;
+}
+`;
+
+// Subsurface scattering approximation: per-channel wrap lighting. Light bleeds past the terminator,
+// red furthest, which gives skin its soft, warm shadow edge instead of a plastic one.
+const SSS_DIFFUSE = /* glsl */ `
+	vec3 sssWrap = uSSS * vec3(0.55, 0.22, 0.12);
+	float sssNL = dot(geometryNormal, directLight.direction);
+	vec3 sssIrradiance = directLight.color * clamp((vec3(sssNL) + sssWrap) / (1.0 + sssWrap), 0.0, 1.0) / (1.0 + 0.5 * sssWrap);
+	reflectedLight.directDiffuse += sssIrradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
+`;
+
 const FRAG_INK = /* glsl */ `
 {
   vec2 xy = vInkCoord;
@@ -172,6 +240,8 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     uTable: { value: emptyFloatTexture() },
     uCenters: { value: emptyFloatTexture() },
     uTableInfo: { value: new Vector4(0, 1, 2, 2) },
+    uSSS: { value: 1 },
+    uDetail: { value: 1 },
   };
   const material = new MeshPhysicalMaterial({
     color: new Color(color),
@@ -188,9 +258,16 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
       '#include <begin_vertex>',
       '#include <begin_vertex>\n vObjPos = position; vInkCoord = inkCoord; vInkMask = inkMask;',
     );
-    shader.fragmentShader = FRAG_HEAD + shader.fragmentShader.replace('#include <map_fragment>', '#include <map_fragment>\n' + FRAG_INK);
+    const diffuseLine = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );';
+    const lights = ShaderChunk.lights_physical_pars_fragment;
+    if (!lights.includes(diffuseLine)) console.warn('three.js lighting chunk changed: skin SSS approximation disabled');
+    shader.fragmentShader = (FRAG_HEAD + FRAG_NOISE + shader.fragmentShader)
+      .replace('#include <lights_physical_pars_fragment>', lights.replace(diffuseLine, SSS_DIFFUSE))
+      .replace('#include <map_fragment>', '#include <map_fragment>\n' + FRAG_TONE + FRAG_INK)
+      .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + FRAG_ROUGH)
+      .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_PORES);
   };
-  material.customProgramCacheKey = () => 'tattoo-skin-v1';
+  material.customProgramCacheKey = () => 'tattoo-skin-v2';
   return { material, uniforms };
 }
 

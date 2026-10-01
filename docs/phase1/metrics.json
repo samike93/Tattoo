@@ -1,0 +1,1168 @@
+[
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 106,
+   "skinArea": 0.01093214055818498,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 1.9465985010312146,
+   "sizeErrP95": 7.135444393008598,
+   "sizeErrMax": 40.18100505612064,
+   "anisoMean": 1.9465982415942056,
+   "anisoP95": 7.135441258687033,
+   "within5": 0.39121243581835885,
+   "flippedFraction": 0.20608347794635568,
+   "meanScale": 1.9732992916925438
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 30,
+   "skinArea": 0.007523173177159108,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.011808779397871855,
+   "sizeErrP95": 0.05809316028069622,
+   "sizeErrMax": 0.05913097132291689,
+   "anisoMean": 0.013252649797938732,
+   "anisoP95": 0.05810713738798623,
+   "within5": 0.9351986670236012,
+   "flippedFraction": 0,
+   "meanScale": 1.0051971945751892
+  },
+  "ms": 13.577245999999946
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, joint axis (θ·r)",
+  "stats": {
+   "triangles": 36,
+   "skinArea": 0.00899670755598685,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.06225173626869445,
+   "sizeErrP95": 0.22098541089649326,
+   "sizeErrMax": 0.2276421349596125,
+   "anisoMean": 0.09384897198101987,
+   "anisoP95": 0.25990259588145803,
+   "within5": 0.19700098875511018,
+   "flippedFraction": 0,
+   "meanScale": 1.004487782476352
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, fitted axis (θ·r)",
+  "stats": {
+   "triangles": 33,
+   "skinArea": 0.00827877692387666,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.05756236795553667,
+   "sizeErrP95": 0.11316825944861675,
+   "sizeErrMax": 0.14216405079227745,
+   "anisoMean": 0.0774070008954867,
+   "anisoP95": 0.15567739098006617,
+   "within5": 0.25750338802975326,
+   "flippedFraction": 0,
+   "meanScale": 0.983403618454964
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, joint axis (arc length)",
+  "stats": {
+   "triangles": 36,
+   "skinArea": 0.00899670755598685,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.033895455886742344,
+   "sizeErrP95": 0.07824076465517571,
+   "sizeErrMax": 0.08235163332143758,
+   "anisoMean": 0.06816725359437922,
+   "anisoP95": 0.15917821069425364,
+   "within5": 0.4914070964540846,
+   "flippedFraction": 0,
+   "meanScale": 1.000872796090233
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 36,
+   "skinArea": 0.00899670755598685,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.021064276105534113,
+   "sizeErrP95": 0.0545712427138586,
+   "sizeErrMax": 0.0558704880611125,
+   "anisoMean": 0.03981445864133324,
+   "anisoP95": 0.10758648956034156,
+   "within5": 0.6860347864956334,
+   "flippedFraction": 0,
+   "meanScale": 1.0005244562962756
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 116,
+   "skinArea": 0.013368453369260812,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 3.3423467750324733,
+   "sizeErrP95": 17.402113319216667,
+   "sizeErrMax": 35.64585424742787,
+   "anisoMean": 3.342346711773903,
+   "anisoP95": 17.402098058268553,
+   "within5": 0.1921269666053679,
+   "flippedFraction": 0.18204636364620674,
+   "meanScale": 2.67117337138517
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 33,
+   "skinArea": 0.00791279964553498,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.014129963823471202,
+   "sizeErrP95": 0.06933027953812831,
+   "sizeErrMax": 0.07300431778065053,
+   "anisoMean": 0.01670692525202207,
+   "anisoP95": 0.07064246214283143,
+   "within5": 0.9225671453498466,
+   "flippedFraction": 0,
+   "meanScale": 1.005621432827225
+  },
+  "ms": 2.474619000000075
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, joint axis (θ·r)",
+  "stats": {
+   "triangles": 38,
+   "skinArea": 0.008732998286442657,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.0497828712331116,
+   "sizeErrP95": 0.10231954737365978,
+   "sizeErrMax": 0.12366641667374556,
+   "anisoMean": 0.06932794980569036,
+   "anisoP95": 0.1372661152705974,
+   "within5": 0.4649254093667747,
+   "flippedFraction": 0,
+   "meanScale": 1.003508774806906
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, fitted axis (θ·r)",
+  "stats": {
+   "triangles": 33,
+   "skinArea": 0.00789268537762346,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.042067803698213654,
+   "sizeErrP95": 0.08474896984386349,
+   "sizeErrMax": 0.1079194353147852,
+   "anisoMean": 0.0616177431899033,
+   "anisoP95": 0.12371178925668969,
+   "within5": 0.48278193497962035,
+   "flippedFraction": 0,
+   "meanScale": 1.0000715677748246
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, joint axis (arc length)",
+  "stats": {
+   "triangles": 36,
+   "skinArea": 0.008347358364611491,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.02471738866741677,
+   "sizeErrP95": 0.06861266160110091,
+   "sizeErrMax": 0.09808897158655028,
+   "anisoMean": 0.04830039478021225,
+   "anisoP95": 0.13921334725960777,
+   "within5": 0.5810654752228405,
+   "flippedFraction": 0,
+   "meanScale": 1.001250401353924
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 33,
+   "skinArea": 0.00789268537762346,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.027114672362941242,
+   "sizeErrP95": 0.07017035303053676,
+   "sizeErrMax": 0.07800220793113044,
+   "anisoMean": 0.05221328081321572,
+   "anisoP95": 0.13478101689249833,
+   "within5": 0.5472346662041316,
+   "flippedFraction": 0,
+   "meanScale": 1.000903335372864
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "Cylindrical (θ·r) + close band",
+  "stats": {
+   "triangles": 40,
+   "skinArea": 0.009330404955212465,
+   "designArea": 0.008774888309597969,
+   "sizeErrMean": 0.0500617867335788,
+   "sizeErrP95": 0.10800077789963214,
+   "sizeErrMax": 0.11866191028223527,
+   "anisoMean": 0.055347994644226406,
+   "anisoP95": 0.11105337297163564,
+   "within5": 0.4531296793005554,
+   "flippedFraction": 0,
+   "meanScale": 1.0003575666052287
+  },
+  "seamMismatchMm": -2.4854223216854963e-13
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "Cylindrical (arc length) + close band",
+  "stats": {
+   "triangles": 40,
+   "skinArea": 0.009330404955212465,
+   "designArea": 0.008774888309597969,
+   "sizeErrMean": 0.041492270219017226,
+   "sizeErrP95": 0.06439668299717083,
+   "sizeErrMax": 0.0685513779368867,
+   "anisoMean": 0.04626604188816184,
+   "anisoP95": 0.06971459297047766,
+   "within5": 0.6287705596521698,
+   "flippedFraction": 0,
+   "meanScale": 0.9985471698817887
+  },
+  "seamMismatchMm": -2.3670795582156163e-13
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm full band, 3 in, fixed width",
+  "method": "Cylindrical (arc length), no closing",
+  "seamMismatchMm": 17.715091519046243,
+  "stats": {
+   "triangles": 71,
+   "skinArea": 0.016724302768102106,
+   "designArea": 0.017549776619195937,
+   "sizeErrMean": 0.07205391057544314,
+   "sizeErrP95": 0.1337999116524351,
+   "sizeErrMax": 0.14887686178870219,
+   "anisoMean": 0.1493120531956574,
+   "anisoP95": 0.27938182461673233,
+   "within5": 0.24986665904062078,
+   "flippedFraction": 0,
+   "meanScale": 1.0035812737608993
+  },
+  "note": "positive = gap at the seam where the forearm is wider than the design; negative = overlap"
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "three.js DecalGeometry",
+  "note": "not possible: a box projection cannot wrap around a limb"
+ },
+ {
+  "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 66,
+   "skinArea": 0.009310757912982612,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.015944758158186828,
+   "sizeErrP95": 0.035497503755796744,
+   "sizeErrMax": 0.1104874348333007,
+   "anisoMean": 0.018028932894041755,
+   "anisoP95": 0.04153088550532047,
+   "within5": 0.9734978288333538,
+   "flippedFraction": 0,
+   "meanScale": 1.0062806331286205
+  },
+  "ms": 2.612129999999979
+ },
+ {
+  "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 196,
+   "skinArea": 0.014992403599444138,
+   "designArea": 0.0096774,
+   "sizeErrMean": 1.2115581578022094,
+   "sizeErrP95": 4.027889180362616,
+   "sizeErrMax": 33.61072937279106,
+   "anisoMean": 1.2115577328186296,
+   "anisoP95": 4.0278729341763375,
+   "within5": 0.2445886121798656,
+   "flippedFraction": 0.31367636200463644,
+   "meanScale": 1.6057791125764562
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Cylindrical (forearm only)",
+  "stats": {
+   "triangles": 28,
+   "skinArea": 0.004374306125753608,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.03225819627492761,
+   "sizeErrP95": 0.10805486958660293,
+   "sizeErrMax": 0.13844307667783173,
+   "anisoMean": 0.055062611373740716,
+   "anisoP95": 0.16548410592053653,
+   "within5": 0.633532682175228,
+   "flippedFraction": 0,
+   "meanScale": 0.9996041014348392
+  },
+  "note": "covers only the forearm half: the upper-arm skin is outside its region"
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×3 in (33% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 21,
+   "skinArea": 0.005470209785482634,
+   "designArea": 0.005806439999999999,
+   "sizeErrMean": 0.007232170275257819,
+   "sizeErrP95": 0.026898019909849413,
+   "sizeErrMax": 0.028903334118457247,
+   "anisoMean": 0.009322485474129498,
+   "anisoP95": 0.0271130923509888,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.0025210420388915
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 3×3 in (33% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 21,
+   "skinArea": 0.005470209785482634,
+   "designArea": 0.005806439999999999,
+   "sizeErrMean": 0.024464495466937304,
+   "sizeErrP95": 0.044250926093950094,
+   "sizeErrMax": 0.07412654545594677,
+   "anisoMean": 0.04683171766079433,
+   "anisoP95": 0.08780028575004284,
+   "within5": 0.5786076376037849,
+   "flippedFraction": 0,
+   "meanScale": 1.0003877916286976
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 4×3 in (44% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 31,
+   "skinArea": 0.00779486546264124,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.009373317315623974,
+   "sizeErrP95": 0.046656463390495784,
+   "sizeErrMax": 0.04692004715264453,
+   "anisoMean": 0.011121784558378402,
+   "anisoP95": 0.04704044009268249,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.003748836895811
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 4×3 in (44% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 30,
+   "skinArea": 0.007561226699036591,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.03183061644630977,
+   "sizeErrP95": 0.07412654545594721,
+   "sizeErrMax": 0.08448064003081246,
+   "anisoMean": 0.06212421989383852,
+   "anisoP95": 0.1375299412690154,
+   "within5": 0.4185967816013893,
+   "flippedFraction": 0,
+   "meanScale": 1.0008609100617134
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 5×3 in (55% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 38,
+   "skinArea": 0.009486988930030277,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.009678206941104188,
+   "sizeErrP95": 0.03617087220364823,
+   "sizeErrMax": 0.04692004715264475,
+   "anisoMean": 0.011956048560669851,
+   "anisoP95": 0.04478791707347041,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.0031257381613654
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 5×3 in (55% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 38,
+   "skinArea": 0.009453572875160974,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.03984132355003192,
+   "sizeErrP95": 0.08194951554615137,
+   "sizeErrMax": 0.11798665599234992,
+   "anisoMean": 0.07824120512151742,
+   "anisoP95": 0.17177214164815813,
+   "within5": 0.3348051792662908,
+   "flippedFraction": 0,
+   "meanScale": 1.0016251317621447
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 6×3 in (66% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 45,
+   "skinArea": 0.011463688582762487,
+   "designArea": 0.011612879999999997,
+   "sizeErrMean": 0.00921122068786729,
+   "sizeErrP95": 0.03617087220364801,
+   "sizeErrMax": 0.04692004715264453,
+   "anisoMean": 0.011328086663820213,
+   "anisoP95": 0.04478791707347063,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.002438233752218
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 6×3 in (66% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 46,
+   "skinArea": 0.011629994785695251,
+   "designArea": 0.011612879999999997,
+   "sizeErrMean": 0.04661042118363075,
+   "sizeErrP95": 0.09909855525484357,
+   "sizeErrMax": 0.11798665599234992,
+   "anisoMean": 0.0927654081505556,
+   "anisoP95": 0.20615004557308336,
+   "within5": 0.2721501788692333,
+   "flippedFraction": 0,
+   "meanScale": 1.0020028550997475
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 7×3 in (77% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 56,
+   "skinArea": 0.013798492970864534,
+   "designArea": 0.013548359999999997,
+   "sizeErrMean": 0.021230444539659544,
+   "sizeErrP95": 0.03617087220365245,
+   "sizeErrMax": 0.9509687457411827,
+   "anisoMean": 0.27351567999368914,
+   "anisoP95": 0.04478791707347041,
+   "within5": 0.9870654797907601,
+   "flippedFraction": 0.012934520209239988,
+   "meanScale": 0.9958891735340092
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Forearm outer, 7×3 in (77% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 55,
+   "skinArea": 0.01339945424463083,
+   "designArea": 0.013548359999999997,
+   "sizeErrMean": 0.05179266579423116,
+   "sizeErrP95": 0.1046339759953363,
+   "sizeErrMax": 0.14549258271156185,
+   "anisoMean": 0.10356145383669958,
+   "anisoP95": 0.20719019986021814,
+   "within5": 0.2362114981245205,
+   "flippedFraction": 0,
+   "meanScale": 1.002449362124801
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Left shoulder blade, 4×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 100,
+   "skinArea": 0.010658571923167657,
+   "designArea": 0.01032256,
+   "sizeErrMean": 0.03534140175032393,
+   "sizeErrP95": 0.12014848997992122,
+   "sizeErrMax": 0.38850331812216643,
+   "anisoMean": 0.03534138496902502,
+   "anisoP95": 0.12015187212610234,
+   "within5": 0.7524283843378249,
+   "flippedFraction": 0,
+   "meanScale": 1.017670705392986
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Left shoulder blade, 4×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 55,
+   "skinArea": 0.010409272555215638,
+   "designArea": 0.01032256,
+   "sizeErrMean": 0.007462088388942441,
+   "sizeErrP95": 0.023996332034822876,
+   "sizeErrMax": 0.0405529350826449,
+   "anisoMean": 0.009459886104521146,
+   "anisoP95": 0.029581933774161184,
+   "within5": 0.9777390086134382,
+   "flippedFraction": 0,
+   "meanScale": 1.0000967570148755
+  },
+  "ms": 1.5492739999999685
+ },
+ {
+  "body": "male",
+  "scenario": "Exp map speed, 2×2 in",
+  "method": "Exponential map",
+  "ms": 0.37302599999998165,
+  "note": "42 vertices"
+ },
+ {
+  "body": "male",
+  "scenario": "Exp map speed, 4×4 in",
+  "method": "Exponential map",
+  "ms": 2.623168000000078,
+  "note": "84 vertices"
+ },
+ {
+  "body": "male",
+  "scenario": "Exp map speed, 8×8 in",
+  "method": "Exponential map",
+  "ms": 1.8391689999998562,
+  "note": "243 vertices"
+ },
+ {
+  "body": "male",
+  "scenario": "Exp map speed, 12×12 in",
+  "method": "Exponential map",
+  "ms": 16.144497,
+  "note": "5436 vertices"
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 164,
+   "skinArea": 0.011958324233021863,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 2.7980819613301877,
+   "sizeErrP95": 6.587255324927198,
+   "sizeErrMax": 134.4423505081579,
+   "anisoMean": 2.79808220622863,
+   "anisoP95": 6.5872591027214344,
+   "within5": 0.28909454588115613,
+   "flippedFraction": 0.32732608758929005,
+   "meanScale": 2.3990409935652646
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 45,
+   "skinArea": 0.007587739803259804,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.014851359261627057,
+   "sizeErrP95": 0.047898026540509564,
+   "sizeErrMax": 0.09283704963340256,
+   "anisoMean": 0.01626784102447655,
+   "anisoP95": 0.04809372464971284,
+   "within5": 0.9586200659168695,
+   "flippedFraction": 0,
+   "meanScale": 1.0067269556804288
+  },
+  "ms": 7.430544999999938
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, joint axis (θ·r)",
+  "stats": {
+   "triangles": 45,
+   "skinArea": 0.007801070318874291,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.06944416799850231,
+   "sizeErrP95": 0.13823987828731155,
+   "sizeErrMax": 0.13930474817358085,
+   "anisoMean": 0.09782421364599998,
+   "anisoP95": 0.17757195120819125,
+   "within5": 0.2020610354630726,
+   "flippedFraction": 0,
+   "meanScale": 0.977767924695332
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, fitted axis (θ·r)",
+  "stats": {
+   "triangles": 47,
+   "skinArea": 0.007944115255274893,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.06283021213880445,
+   "sizeErrP95": 0.13251597846845176,
+   "sizeErrMax": 0.1408574312018538,
+   "anisoMean": 0.08533244449073443,
+   "anisoP95": 0.16652008869489876,
+   "within5": 0.26320304345554285,
+   "flippedFraction": 0,
+   "meanScale": 0.9882885288844497
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, joint axis (arc length)",
+  "stats": {
+   "triangles": 46,
+   "skinArea": 0.007922580840111285,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.027967825762014217,
+   "sizeErrP95": 0.07718638161230451,
+   "sizeErrMax": 0.07767237784271286,
+   "anisoMean": 0.055213836123121675,
+   "anisoP95": 0.16238031357873894,
+   "within5": 0.5884354479124909,
+   "flippedFraction": 0,
+   "meanScale": 1.0003637711303823
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm front, 3×4 in",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 47,
+   "skinArea": 0.008045874942532946,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.02361087900914292,
+   "sizeErrP95": 0.06489430662707774,
+   "sizeErrMax": 0.06920346001962763,
+   "anisoMean": 0.045152162183472774,
+   "anisoP95": 0.13282241548648832,
+   "within5": 0.6294838071491857,
+   "flippedFraction": 0,
+   "meanScale": 1.0002344166372046
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 170,
+   "skinArea": 0.013950902209719571,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 13.250818271356849,
+   "sizeErrP95": 36.937784243171876,
+   "sizeErrMax": 1287.3177319269826,
+   "anisoMean": 13.250821760414143,
+   "anisoP95": 36.93778397906153,
+   "within5": 0.15766611431342267,
+   "flippedFraction": 0.34408098709025,
+   "meanScale": 7.625409137615192
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 48,
+   "skinArea": 0.00783154063192241,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.01510608580728683,
+   "sizeErrP95": 0.08197391608708626,
+   "sizeErrMax": 0.09686115140377205,
+   "anisoMean": 0.01668206018758605,
+   "anisoP95": 0.0820577438224721,
+   "within5": 0.9435732695906556,
+   "flippedFraction": 0,
+   "meanScale": 1.0060895079446903
+  },
+  "ms": 0.8751139999999396
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, joint axis (θ·r)",
+  "stats": {
+   "triangles": 46,
+   "skinArea": 0.00754909301608455,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.08093795662851565,
+   "sizeErrP95": 0.33118871399445005,
+   "sizeErrMax": 0.3409342707486236,
+   "anisoMean": 0.09843938272398017,
+   "anisoP95": 0.362829375942171,
+   "within5": 0.36794508721953156,
+   "flippedFraction": 0,
+   "meanScale": 1.0104899013378088
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, fitted axis (θ·r)",
+  "stats": {
+   "triangles": 46,
+   "skinArea": 0.0074597252560730356,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.061122627658057975,
+   "sizeErrP95": 0.2845455260644729,
+   "sizeErrMax": 0.3240064283956994,
+   "anisoMean": 0.08058153455988817,
+   "anisoP95": 0.2896497745639546,
+   "within5": 0.44893758330168565,
+   "flippedFraction": 0,
+   "meanScale": 1.0077298222602462
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, joint axis (arc length)",
+  "stats": {
+   "triangles": 46,
+   "skinArea": 0.007439799797072102,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.026882344697889766,
+   "sizeErrP95": 0.07338386513940809,
+   "sizeErrMax": 0.07770280285908604,
+   "anisoMean": 0.05285554585458323,
+   "anisoP95": 0.15276415966861578,
+   "within5": 0.5725458581370703,
+   "flippedFraction": 0,
+   "meanScale": 1.0012083691770821
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×4 in",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 47,
+   "skinArea": 0.00760670315593195,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.029824018157214006,
+   "sizeErrP95": 0.06591390747555204,
+   "sizeErrMax": 0.07481135722752952,
+   "anisoMean": 0.058480441968442924,
+   "anisoP95": 0.13980447404749619,
+   "within5": 0.46929909209002235,
+   "flippedFraction": 0,
+   "meanScale": 1.000699190187758
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "Cylindrical (θ·r) + close band",
+  "stats": {
+   "triangles": 43,
+   "skinArea": 0.007206813142611041,
+   "designArea": 0.007485232835412026,
+   "sizeErrMean": 0.04810112048593321,
+   "sizeErrP95": 0.12140089681478838,
+   "sizeErrMax": 0.1287567569016035,
+   "anisoMean": 0.05184299826958741,
+   "anisoP95": 0.1211937328717092,
+   "within5": 0.5257710456993125,
+   "flippedFraction": 0,
+   "meanScale": 1.0052226164201652
+  },
+  "seamMismatchMm": -1.6984868676077526e-13
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "Cylindrical (arc length) + close band",
+  "stats": {
+   "triangles": 43,
+   "skinArea": 0.007206813142611041,
+   "designArea": 0.007485232835412026,
+   "sizeErrMean": 0.04185523227584848,
+   "sizeErrP95": 0.06322895208769741,
+   "sizeErrMax": 0.0658154955860859,
+   "anisoMean": 0.04588402334548479,
+   "anisoP95": 0.06936797778574477,
+   "within5": 0.6117101729516058,
+   "flippedFraction": 0,
+   "meanScale": 1.002495945086662
+  },
+  "seamMismatchMm": -1.9704825295292314e-13
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm full band, 3 in, fixed width",
+  "method": "Cylindrical (arc length), no closing",
+  "seamMismatchMm": -18.149998874521387,
+  "stats": {
+   "triangles": 97,
+   "skinArea": 0.015741998836918396,
+   "designArea": 0.014970465670824051,
+   "sizeErrMean": 0.0709746015117729,
+   "sizeErrP95": 0.13148856008730747,
+   "sizeErrMax": 0.14422819960743882,
+   "anisoMean": 0.14743550327920268,
+   "anisoP95": 0.27905638786561515,
+   "within5": 0.22814551030819455,
+   "flippedFraction": 0,
+   "meanScale": 1.0029371442038162
+  },
+  "note": "positive = gap at the seam where the forearm is wider than the design; negative = overlap"
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm full band, 1.5 in",
+  "method": "three.js DecalGeometry",
+  "note": "not possible: a box projection cannot wrap around a limb"
+ },
+ {
+  "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 104,
+   "skinArea": 0.010247241428947866,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.04428423158579396,
+   "sizeErrP95": 0.14436752156598942,
+   "sizeErrMax": 0.21237391232507852,
+   "anisoMean": 0.04513563228530827,
+   "anisoP95": 0.14522061328381652,
+   "within5": 0.6993499414599094,
+   "flippedFraction": 0,
+   "meanScale": 1.0206405689146005
+  },
+  "ms": 1.4766280000001188
+ },
+ {
+  "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 299,
+   "skinArea": 0.01736362753727595,
+   "designArea": 0.0096774,
+   "sizeErrMean": 1.7274342390944155,
+   "sizeErrP95": 4.424129284418242,
+   "sizeErrMax": 40.3467896811874,
+   "anisoMean": 1.7274344259495547,
+   "anisoP95": 4.424129112444282,
+   "within5": 0.20005045720356962,
+   "flippedFraction": 0.44927607086581317,
+   "meanScale": 1.8637171522090883
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Cylindrical (forearm only)",
+  "stats": {
+   "triangles": 44,
+   "skinArea": 0.0049532922466055075,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.0317603502906609,
+   "sizeErrP95": 0.14779927636646173,
+   "sizeErrMax": 0.26937734616106146,
+   "anisoMean": 0.05174465590454204,
+   "anisoP95": 0.2318885471713299,
+   "within5": 0.7192761951065496,
+   "flippedFraction": 0,
+   "meanScale": 0.9982693242746415
+  },
+  "note": "covers only the forearm half: the upper-arm skin is outside its region"
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×3 in (39% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 36,
+   "skinArea": 0.0061292144103028984,
+   "designArea": 0.005806439999999999,
+   "sizeErrMean": 0.010046821917962318,
+   "sizeErrP95": 0.027925903292941312,
+   "sizeErrMax": 0.04314215590061243,
+   "anisoMean": 0.012005224339357353,
+   "anisoP95": 0.029908622545104624,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.0040064789323868
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 3×3 in (39% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 37,
+   "skinArea": 0.006349710437954165,
+   "designArea": 0.005806439999999999,
+   "sizeErrMean": 0.02958598909604776,
+   "sizeErrP95": 0.06591390747555226,
+   "sizeErrMax": 0.07481135722753018,
+   "anisoMean": 0.058129268312377864,
+   "anisoP95": 0.13270028429994896,
+   "within5": 0.46556108353182085,
+   "flippedFraction": 0,
+   "meanScale": 1.0005462760203578
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 4×3 in (52% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 50,
+   "skinArea": 0.008470403975016265,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.01022630845072476,
+   "sizeErrP95": 0.027471909041056675,
+   "sizeErrMax": 0.04314215590061177,
+   "anisoMean": 0.012794135909111931,
+   "anisoP95": 0.029908622545104624,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.0033098378720116
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 4×3 in (52% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 51,
+   "skinArea": 0.008621289354785037,
+   "designArea": 0.0077419199999999985,
+   "sizeErrMean": 0.03968909038100471,
+   "sizeErrP95": 0.07858223548308185,
+   "sizeErrMax": 0.08770088982369484,
+   "anisoMean": 0.07874632750229962,
+   "anisoP95": 0.1533642045118313,
+   "within5": 0.3428928029154362,
+   "flippedFraction": 0,
+   "meanScale": 1.0014051272624516
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 5×3 in (65% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 60,
+   "skinArea": 0.010380045885991262,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.010401217443945777,
+   "sizeErrP95": 0.027471909041056897,
+   "sizeErrMax": 0.04314215590061243,
+   "anisoMean": 0.01303955230193306,
+   "anisoP95": 0.03527240790733699,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 1.0029432486870036
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 5×3 in (65% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 61,
+   "skinArea": 0.010286125431605371,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.044996431322270374,
+   "sizeErrP95": 0.08056679007476708,
+   "sizeErrMax": 0.08958859402085095,
+   "anisoMean": 0.09019938124963542,
+   "anisoP95": 0.16258294734289702,
+   "within5": 0.28739471351613477,
+   "flippedFraction": 0,
+   "meanScale": 1.0016227536554647
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 6×3 in (78% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 93,
+   "skinArea": 0.015604783303644352,
+   "designArea": 0.011612879999999997,
+   "sizeErrMean": 0.4219629308550691,
+   "sizeErrP95": 1.5104886881407742,
+   "sizeErrMax": 14.904618452706954,
+   "anisoMean": 1.375839084190743,
+   "anisoP95": 7.461761185582656,
+   "within5": 0.778236007094495,
+   "flippedFraction": 0.14480985929401613,
+   "meanScale": 1.0887639959584974
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 6×3 in (78% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 75,
+   "skinArea": 0.012472224116304,
+   "designArea": 0.011612879999999997,
+   "sizeErrMean": 0.052297283570771215,
+   "sizeErrP95": 0.10038736099202916,
+   "sizeErrMax": 0.11302137199861173,
+   "anisoMean": 0.10571453626320916,
+   "anisoP95": 0.20806852123435937,
+   "within5": 0.23702092297578783,
+   "flippedFraction": 0,
+   "meanScale": 1.0020872261180849
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 7×3 in (91% of circumference)",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 101,
+   "skinArea": 0.01675607593435133,
+   "designArea": 0.013548359999999997,
+   "sizeErrMean": 0.40129957826869034,
+   "sizeErrP95": 1.510488688140772,
+   "sizeErrMax": 14.904618452707153,
+   "anisoMean": 1.3000793235588828,
+   "anisoP95": 7.461761185582656,
+   "within5": 0.7777881476280456,
+   "flippedFraction": 0.15054515761407686,
+   "meanScale": 1.080610140542572
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Forearm outer, 7×3 in (91% of circumference)",
+  "method": "Cylindrical, fitted axis (arc length)",
+  "stats": {
+   "triangles": 89,
+   "skinArea": 0.014538261412315626,
+   "designArea": 0.013548359999999997,
+   "sizeErrMean": 0.06030844154119975,
+   "sizeErrP95": 0.11796645243681181,
+   "sizeErrMax": 0.1324752080821212,
+   "anisoMean": 0.12332967700855307,
+   "anisoP95": 0.2543045831793094,
+   "within5": 0.20333779863822105,
+   "flippedFraction": 0,
+   "meanScale": 1.0025491950663057
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Left shoulder blade, 4×4 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 120,
+   "skinArea": 0.01066120430175629,
+   "designArea": 0.01032256,
+   "sizeErrMean": 0.03501102352617703,
+   "sizeErrP95": 0.19408092330925109,
+   "sizeErrMax": 0.21630167016614732,
+   "anisoMean": 0.03501101194864098,
+   "anisoP95": 0.19408024244923316,
+   "within5": 0.8168993500409514,
+   "flippedFraction": 0,
+   "meanScale": 1.0175055160504924
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Left shoulder blade, 4×4 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 65,
+   "skinArea": 0.010092734822836416,
+   "designArea": 0.01032256,
+   "sizeErrMean": 0.006557557257475173,
+   "sizeErrP95": 0.02030646921029511,
+   "sizeErrMax": 0.029383967166188185,
+   "anisoMean": 0.007743502460630471,
+   "anisoP95": 0.025843089905352334,
+   "within5": 1,
+   "flippedFraction": 0,
+   "meanScale": 0.9978460194001421
+  },
+  "ms": 4.985398999999916
+ },
+ {
+  "body": "female",
+  "scenario": "Exp map speed, 2×2 in",
+  "method": "Exponential map",
+  "ms": 0.269416000000092,
+  "note": "48 vertices"
+ },
+ {
+  "body": "female",
+  "scenario": "Exp map speed, 4×4 in",
+  "method": "Exponential map",
+  "ms": 0.5081910000001244,
+  "note": "97 vertices"
+ },
+ {
+  "body": "female",
+  "scenario": "Exp map speed, 8×8 in",
+  "method": "Exponential map",
+  "ms": 0.8444750000001022,
+  "note": "307 vertices"
+ },
+ {
+  "body": "female",
+  "scenario": "Exp map speed, 12×12 in",
+  "method": "Exponential map",
+  "ms": 17.722539000000097,
+  "note": "6315 vertices"
+ }
+]

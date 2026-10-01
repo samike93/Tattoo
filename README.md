@@ -4,8 +4,8 @@ A browser app for tattoo consultations: put a design on a to-scale 3D body, wrap
 and legs without stretching, size it in inches, and show the client from any angle. Everything runs
 in the browser; designs never leave the device.
 
-**Status: Phase 0 (technical spike) is done.** It answers "which wrapping method works?" with
-measurements on real male and female bodies. Read the [Phase 0 report](docs/phase0/REPORT.md).
+**Status: Phase 1 (MVP) is done.** Read the [Phase 1 report](docs/phase1/REPORT.md) and the
+[Phase 0 report](docs/phase0/REPORT.md) (which wrapping method works, with measurements).
 The full spec is in [docs/spec.md](docs/spec.md).
 
 ## Try it
@@ -15,20 +15,26 @@ npm install
 npm run dev          # http://localhost:5173
 ```
 
-On the test page:
+1. **Body**: male or female, the client's height in feet and inches, build, muscle, skin tone.
+   Shapes come from the Anny body model, so a taller client really is taller, not just scaled.
+2. **Import design**: PNG, JPG, WEBP, SVG, PDF or Illustrator `.ai` (or drop a file anywhere on the
+   page). Multi-page PDFs and multi-artboard `.ai` files let you pick a page. The background is
+   removed automatically, with a before/after preview and controls; **Download PNG** saves the
+   cleaned-up design.
+3. **Place it**: tap the body, then drag the design to move it (mouse or finger). **Auto** follows
+   the skin anywhere and wraps around a limb for wide designs; tick **Full band** for a band that
+   closes all the way round.
+4. **Size and rotation** in inches, with centimetres shown.
+5. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
+   share sheet.
 
-- **Placement method**: Exponential map (recommended for patches), Cylindrical wrap (bands and
-  sleeves), or three.js DecalGeometry (the flat baseline, for comparison).
-- **Tap the body** to move the design. In Cylindrical mode, tapping a limb picks that limb.
-- **Design**: the 1-inch checkerboard (cells are exactly 1 inch at any size, with an "F↑" so
-  mirroring and rotation are obvious), or upload your own PNG/JPG/WEBP/SVG.
-- **Distortion (live)** shows how true the current placement is: how much of the design is within
-  5% of real size and square, and whether any of it is mirrored (bleeding through a limb).
-- **Behind design** camera: look at the other side of the arm. That's where DecalGeometry fails.
+The **1-inch grid** design is still there for checking accuracy, and **Method (advanced)** at the
+bottom of the panel shows the live distortion numbers and lets you force a method.
 
 ## Put it on a website
 
-`npm run build` makes a static `dist/` folder (about 3 MB: the app plus two 840 KB body models).
+`npm run build` makes a static `dist/` folder (about 11 MB: the app, the PDF reader, and two
+3.8 MB body models; hosts serve them compressed).
 It uses relative paths, so it works anywhere:
 
 | Where | How |
@@ -55,13 +61,15 @@ Needs a browser with WebGL 2 (Safari 15+, Chrome, Edge, Firefox; iPad works).
 ## Develop
 
 ```bash
-npm test                           # unit tests (wrap math, exponential map, distortion metric)
-npm run measure                    # Phase 0 study on the real bodies → docs/phase0/metrics.md
-npm run build && npm run screenshots   # headless renders → docs/phase0/*.png
+npm test                           # unit tests (wrap math, body shape, import, background removal...)
+npm run measure                    # distortion study on the real bodies → docs/phase1/metrics.md
+npm run build && node scripts/e2e.mjs  # end-to-end checks in headless Chromium
+npm run build && npm run screenshots   # headless renders → docs/phase1/*.png
 node scripts/check-licenses.mjs    # fails on any non MIT/Apache/BSD/ISC/CC0 dependency
 ```
 
-Regenerate the bodies (needs Python 3.11, PyTorch, `pip install anny`):
+Regenerate the bodies (needs Python 3.11, PyTorch, `pip install anny scipy`). This also bakes the
+18 body-shape corners and straightens the elbows:
 
 ```bash
 python tools/export_bodies.py --out public/models

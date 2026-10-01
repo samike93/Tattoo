@@ -73,11 +73,11 @@ try {
   await page.getByLabel(/Full band/).uncheck();
   await settle();
 
-  // A wide design on the forearm wraps with the cylinder automatically.
-  await page.evaluate(() => window.tattoo.set({ widthIn: 6, heightIn: 3 }));
+  // A design wrapping most of the way round the forearm switches to the cylinder automatically.
+  await page.evaluate(() => window.tattoo.set({ widthIn: 7, heightIn: 3 }));
   await settle();
   s = await state();
-  check('a 6 in wide forearm design uses the cylinder', s.resolved.method === 'cylinder', JSON.stringify(s.resolved));
+  check('a 7 in wide forearm design uses the cylinder', s.resolved.method === 'cylinder', JSON.stringify(s.resolved));
   await page.evaluate(() => window.tattoo.set({ widthIn: 3, heightIn: 4 }));
   await settle();
 
@@ -179,6 +179,33 @@ try {
   const msg = await page.locator('.modal .error').innerText();
   check('a non-PDF-compatible .ai shows the re-save message', /Create PDF Compatible File/.test(msg), msg.slice(0, 60));
   await page.keyboard.press('Escape');
+
+  // Export a high-resolution front view.
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 30000 }), page.getByRole('button', { name: 'Front', exact: true }).last().click()]);
+  const file = `${OUT}/e2e-export-front.png`;
+  await download.saveAs(file);
+  const dims = await page.evaluate(async (b64) => {
+    const img = new Image();
+    img.src = `data:image/png;base64,${b64}`;
+    await img.decode();
+    return [img.naturalWidth, img.naturalHeight];
+  }, (await import('node:fs')).readFileSync(file).toString('base64'));
+  check('exports a 2250 x 3000 px front view PNG', dims[0] === 2250 && dims[1] === 3000, dims.join(' x '));
+
+  // Skin close-ups, detail on and off.
+  await page.evaluate(() => window.tattoo.set({ design: { kind: 'checker', name: '1-inch checkerboard', aspect: 0.75 }, placement: null, spot: 'forearm', widthIn: 3, heightIn: 4, skinDetail: true, skinTone: '#b47b52' }));
+  await settle(1500);
+  // Close enough to see pores: 12 cm from the skin, looking at the edge of the design.
+  await page.evaluate(() => {
+    const f = window.tattoo.get().focus;
+    window.tattoo.lookAt(f.point.map((v, i) => v + f.normal[i] * 0.12 + (i === 1 ? 0.03 : 0)), f.point);
+  });
+  await settle(1000);
+  await page.screenshot({ path: `${OUT}/e2e-skin-detail.png`, clip: { x: 160, y: 120, width: 620, height: 620 } });
+  await page.evaluate(() => window.tattoo.set({ skinDetail: false }));
+  await settle(800);
+  await page.screenshot({ path: `${OUT}/e2e-skin-plain.png`, clip: { x: 160, y: 120, width: 620, height: 620 } });
+  await page.evaluate(() => window.tattoo.set({ skinDetail: true }));
 
   s = await state();
   check('no errors logged by the app', s.errors.length === 0, JSON.stringify(s.errors));

@@ -17,3 +17,5 @@ jobs:
       - run: npm run measure
       - run: node scripts/check-licenses.mjs
       - run: npm run build
+      - run: npx playwright-core install --with-deps chromium
+      - run: node scripts/e2e.mjs

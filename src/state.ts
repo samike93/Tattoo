@@ -6,7 +6,7 @@ import type { Vec3 } from './projection/vec';
 
 export type Method = 'auto' | 'decal' | 'cylinder' | 'expmap';
 export type CameraPreset = 'front' | 'back' | 'left' | 'right' | 'design' | 'opposite';
-export type Spot = 'forearm' | 'shoulderBlade';
+export type Spot = 'forearm' | 'shoulderBlade' | 'innerElbow';
 
 export interface DesignSource {
   kind: 'checker' | 'image';
@@ -61,6 +61,8 @@ export interface AppState {
   design: DesignSource;
   showRegion: boolean;
   wireframe: boolean;
+  /** Pores and subsurface glow (turn off on slow devices). */
+  skinDetail: boolean;
   debugOpen: boolean;
   ui: boolean;
   /** Import dialog: closed, open, or open with a file dropped onto the page. */
@@ -111,6 +113,7 @@ export const useApp = create<AppState>((set) => ({
   design: { kind: 'checker', name: '1-inch checkerboard', aspect: 0.75 },
   showRegion: false,
   wireframe: false,
+  skinDetail: true,
   debugOpen: false,
   ui: true,
   importDialog: { open: false },
@@ -134,7 +137,7 @@ export const useApp = create<AppState>((set) => ({
 /** State that goes into a share link (everything except uploaded images and readouts). */
 const LINK_KEYS = [
   'bodyId', 'clientHeight', 'bodyWeight', 'bodyMuscle', 'skinTone', 'method', 'limbId', 'cylMode', 'band', 'slide', 'around', 'spot',
-  'widthIn', 'heightIn', 'rotationDeg', 'mirror', 'opacity', 'showRegion', 'wireframe', 'debugOpen', 'ui',
+  'widthIn', 'heightIn', 'rotationDeg', 'mirror', 'opacity', 'showRegion', 'wireframe', 'skinDetail', 'debugOpen', 'ui',
 ] as const;
 
 export function stateToHash(s: AppState): string {

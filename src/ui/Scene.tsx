@@ -24,12 +24,13 @@ import { designUV, INCH, type DesignTransform } from '../projection/design';
 import type { DistortionStats } from '../projection/distortion';
 import { cylinderSamples, measureSamples, vertexCoordSamples } from '../projection/evaluate';
 import { computeExpMapAsync, setExpMapSurface } from '../projection/expmapClient';
-import { chooseMethod, limbAt } from '../placement/resolve';
+import { chooseMethod, limbAt, type AutoChoice } from '../placement/resolve';
 import { createSkinMaterial, setCylinderUniforms, setDesignUniforms } from '../ink/skinMaterial';
 import { drawChecker } from '../phase0/checker';
 import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
-import { useApp, type AppState, type Spot } from '../state';
+import { useApp, type AppState, type CameraPreset, type Spot } from '../state';
+import { Exporter } from './Exporter';
 import { add, dot, normalize, scale, sub, tangentFrame, type Vec3 } from '../projection/vec';
 
 // three-mesh-bvh: fast raycasts on the body (tapping to place a design).
@@ -90,6 +91,7 @@ export function Scene() {
       {body && <Body body={body} />}
       <FrameStats />
       <TestHooks body={body} />
+      <Exporter body={body} />
     </>
   );
 }
@@ -116,8 +118,38 @@ function Lights() {
   );
 }
 
+/**
+ * Camera position and target for a preset view. Whole-body views back off until the body fits the
+ * frame at this aspect ratio (portrait phones and exports included).
+ */
+export function presetPose(preset: CameraPreset, h: number, aspect = 1, fovDeg = 35): { pos: Vec3; target: Vec3 } {
+  const mid = h * 0.5;
+  const t = Math.tan((fovDeg * Math.PI) / 360);
+  const fit = (halfW: number) => Math.max((0.54 * h) / t, halfW / (t * aspect)) + 0.15;
+  const front = fit(0.4 * h), side = fit(0.2 * h);
+  const st = useApp.getState();
+  const focus = st.focus;
+  switch (preset) {
+    case 'back':
+      return { pos: [0, mid, -front], target: [0, mid, 0] };
+    case 'left':
+      return { pos: [side, mid, 0], target: [0, mid, 0] };
+    case 'right':
+      return { pos: [-side, mid, 0], target: [0, mid, 0] };
+    case 'design':
+      return focus ? { pos: add(focus.point, scale(focus.normal, 0.42)), target: focus.point } : { pos: [0, mid, front], target: [0, mid, 0] };
+    case 'opposite': {
+      const o = st.focusOpposite ?? focus;
+      return o ? { pos: add(o.point, scale(o.normal, 0.42)), target: o.point } : { pos: [0, mid, -front], target: [0, mid, 0] };
+    }
+    default:
+      return { pos: [0, mid, front], target: [0, mid, 0] };
+  }
+}
+
 function CameraRig({ body }: { body: LoadedBody | null }) {
   const camera = useApp((s) => s.camera);
+  const size = useThree((s) => s.size);
   const cam = useThree((s) => s.camera);
   const dom = useThree((s) => s.gl.domElement);
   const setThree = useThree((s) => s.set);
@@ -134,24 +166,7 @@ function CameraRig({ body }: { body: LoadedBody | null }) {
   useFrame(() => controls.update());
 
   useEffect(() => {
-    const mid = h * 0.55;
-    const dist = h * 1.45;
-    let pos: Vec3, target: Vec3;
-    const focus = useApp.getState().focus;
-    switch (camera.preset) {
-      case 'back': [pos, target] = [[0, mid, -dist], [0, mid, 0]]; break;
-      case 'left': [pos, target] = [[dist, mid, 0], [0, mid, 0]]; break;
-      case 'right': [pos, target] = [[-dist, mid, 0], [0, mid, 0]]; break;
-      case 'design':
-        [pos, target] = focus ? [add(focus.point, scale(focus.normal, 0.42)), focus.point] : [[0, mid, dist], [0, mid, 0]];
-        break;
-      case 'opposite': {
-        const o = useApp.getState().focusOpposite ?? focus;
-        [pos, target] = o ? [add(o.point, scale(o.normal, 0.42)), o.point] : [[0, mid, -dist], [0, mid, 0]];
-        break;
-      }
-      default: [pos, target] = [[0, mid, dist], [0, mid, 0]];
-    }
+    const { pos, target } = presetPose(camera.preset, h, size.width / Math.max(size.height, 1));
     cam.position.set(...pos);
     controls.target.set(...target);
     controls.update();
@@ -163,6 +178,7 @@ function CameraRig({ body }: { body: LoadedBody | null }) {
 /** Hooks for automated tests and console debugging: window.tattoo.project(p) and .bodyHeight(). */
 function TestHooks({ body }: { body: LoadedBody | null }) {
   const camera = useThree((s) => s.camera);
+  const controls = useThree((s) => s.controls) as OrbitControls | null;
   const dom = useThree((s) => s.gl.domElement);
   useEffect(() => {
     const t = (window as unknown as { tattoo: Record<string, unknown> }).tattoo;
@@ -172,11 +188,16 @@ function TestHooks({ body }: { body: LoadedBody | null }) {
       const r = dom.getBoundingClientRect();
       return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
     };
+    t.lookAt = (pos: Vec3, target: Vec3) => {
+      camera.position.set(...pos);
+      controls?.target.set(...target);
+      controls?.update();
+    };
     t.bodyHeight = () => {
       const bb = body?.geometry.boundingBox;
       return bb ? bb.max.y - bb.min.y : NaN;
     };
-  }, [camera, dom, body]);
+  }, [camera, dom, body, controls]);
   return null;
 }
 
@@ -206,7 +227,7 @@ function FrameStats() {
 
 type Shared = Pick<
   AppState,
-  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone'
+  'method' | 'limbId' | 'cylMode' | 'band' | 'slide' | 'around' | 'placement' | 'spot' | 'widthIn' | 'heightIn' | 'rotationDeg' | 'mirror' | 'opacity' | 'design' | 'showRegion' | 'skinTone' | 'skinDetail'
 >;
 
 function Body({ body }: { body: LoadedBody }) {
@@ -226,7 +247,7 @@ function Body({ body }: { body: LoadedBody }) {
   const shared = useApp(useShallow((s: AppState): Shared => ({
     method: s.method, limbId: s.limbId, cylMode: s.cylMode, band: s.band, slide: s.slide, around: s.around,
     placement: s.placement, spot: s.spot, widthIn: s.widthIn, heightIn: s.heightIn, rotationDeg: s.rotationDeg, mirror: s.mirror,
-    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone,
+    opacity: s.opacity, design: s.design, showRegion: s.showRegion, skinTone: s.skinTone, skinDetail: s.skinDetail,
   })));
 
   const frameFor = (id: string) => {
@@ -256,6 +277,8 @@ function Body({ body }: { body: LoadedBody }) {
     try {
       const t0 = performance.now();
       material.color = new Color(shared.skinTone);
+      uniforms.uDetail.value = shared.skinDetail ? 1 : 0;
+      uniforms.uSSS.value = shared.skinDetail ? 1 : 0;
       const geo = body.geometry;
       const inkCoord = geo.getAttribute('inkCoord');
       const inkMask = geo.getAttribute('inkMask');
@@ -269,6 +292,7 @@ function Body({ body }: { body: LoadedBody }) {
       let pl: CylPlacement | null = null;
       let hit: SurfaceHit | null = null;
       let limbLabel: string | null = null;
+      let autoChoice: AutoChoice | null = null;
       if (shared.method === 'cylinder') {
         method = 'cylinder';
         frame = frameFor(shared.limbId);
@@ -279,6 +303,7 @@ function Body({ body }: { body: LoadedBody }) {
         if (!hit) throw new Error('Could not find a spot on the body for the design');
         if (shared.method === 'auto') {
           const choice = chooseMethod(body, hit, width, shared.band, frameFor);
+          autoChoice = choice;
           method = choice.method;
           limbLabel = choice.limb?.label ?? null;
           if (choice.method === 'cylinder' && choice.limb) {
@@ -329,20 +354,32 @@ function Body({ body }: { body: LoadedBody }) {
       };
 
       // 3. Apply.
-      if (method === 'cylinder' && frame && pl) {
-        setCylinderUniforms(uniforms, frame, pl);
-        for (let i = 0; i < vid.length; i++) inkMask.setX(i, frame.vertexMask[vid[i]]);
+      const applyCylinder = (fr: LimbFrame, p: CylPlacement, note: string) => {
+        method = 'cylinder';
+        limbLabel = fr.limb.label;
+        setCylinderUniforms(uniforms, fr, p);
+        for (let i = 0; i < vid.length; i++) inkMask.setX(i, fr.vertexMask[vid[i]]);
         inkMask.needsUpdate = true;
         uniforms.uInkMode.value = 2;
-        live.current = { kind: 'cylinder', frame, pl, tf };
+        live.current = { kind: 'cylinder', frame: fr, pl: p, tf };
         setDecal(null);
-        const metrics = measureSamples(cylinderSamples(body.surface, frame, pl, tf), tf, band ? width : undefined);
-        finish(metrics, hit ?? limbSurfacePoint(body, mesh, frame, pl.centerT, pl.centerAngle), band ? 'Full band: the width follows the limb so the band closes exactly.' : `Wraps around the ${frame.limb.label.toLowerCase()}.`);
+        const metrics = measureSamples(cylinderSamples(body.surface, fr, p, tf), tf, band ? width : undefined);
+        finish(metrics, hit ?? limbSurfacePoint(body, mesh, fr, p.centerT, p.centerAngle), note);
+      };
+
+      if (method === 'cylinder' && frame && pl) {
+        applyCylinder(frame, pl, band ? 'Full band: the width follows the limb so the band closes exactly.' : `Wraps around the ${frame.limb.label.toLowerCase()}.`);
       } else if (method === 'expmap' && hit) {
         const seedHit = hit;
         computeExpMapAsync(seedHit, [0, 1, 0], expmapRadius(tf))
           .then((em) => {
             if (!em || my !== seq.current) return; // superseded by a newer placement
+            const metrics = measureSamples(vertexCoordSamples(body.surface, em.coords, tf), tf);
+            if (autoChoice?.limb && metrics.flippedFraction > 0.005) {
+              // The surface wrap folded over itself going round the limb: wrap with the cylinder.
+              applyCylinder(frameFor(autoChoice.limb.id), { centerT: autoChoice.centerT!, centerAngle: autoChoice.centerAngle!, mode: 'arc' }, `Too wide for a surface wrap here, so it wraps around the ${autoChoice.limb.label.toLowerCase()}.`);
+              return;
+            }
             app.setTiming('expmapMs', em.ms);
             app.setTiming('expmapVertices', em.reached);
             for (let i = 0; i < vid.length; i++) {
@@ -356,7 +393,7 @@ function Body({ body }: { body: LoadedBody }) {
             uniforms.uInkMode.value = 1;
             live.current = { kind: 'expmap', coords: em.coords, tf };
             setDecal(null);
-            finish(measureSamples(vertexCoordSamples(body.surface, em.coords, tf), tf), seedHit, '');
+            finish(metrics, seedHit, '');
           })
           .catch(fail);
       } else if (hit) {
@@ -521,6 +558,7 @@ const toPlacement = (h: SurfaceHit) => ({ point: h.point, normal: h.normal, tria
 
 function defaultSpot(body: LoadedBody, mesh: Mesh, spot: Spot, forearm: LimbFrame): SurfaceHit | null {
   if (spot === 'shoulderBlade') return shoulderBladePoint(body, mesh);
+  if (spot === 'innerElbow') return limbSurfacePoint(body, mesh, forearm, 0, 0);
   return limbSurfacePoint(body, mesh, forearm, forearm.length / 2, Math.PI / 2);
 }
 

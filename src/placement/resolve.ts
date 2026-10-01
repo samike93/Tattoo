@@ -3,11 +3,13 @@ import { LIMBS, type LimbDef } from '../body/skeleton';
 import { cylCoords, ringCircumference, type LimbFrame } from '../projection/cylindrical';
 
 /**
- * Phase 0 finding: the exponential map is the best method for patches anywhere, including limbs;
- * the cylinder is needed only when a design wraps far around a limb (it cannot fold) or must close
- * into a band. Past ~45% of the circumference the exponential map's front starts to fold.
+ * The exponential map is the best method for patches anywhere, including limbs. Measured on the
+ * forearm (docs/phase1/REPORT.md): it keeps 93-100% of a design within 5% up to 69% of the
+ * circumference, and folds over (mirrored areas) from ~80%; the switch sits in between. The
+ * cylinder is worse at every width, but it is the only method that wraps all the way round and
+ * closes a band.
  */
-export const WRAP_THRESHOLD = 0.45;
+export const WRAP_THRESHOLD = 0.72;
 
 export type ResolvedMethod = 'expmap' | 'cylinder' | 'decal';
 

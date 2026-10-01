@@ -64,3 +64,50 @@ unrelated modules. three.js ships the same controls.
 `vite.config.ts` uses `base: './'` so the same `dist/` works at a domain root, in a sub-folder of
 an existing website, on GitHub Pages, or embedded in an `<iframe>`. State lives in the URL hash so
 share links work on static hosting without rewrites.
+
+### 2026-10-01: Body shape from Anny's 18 corner shapes (Phase 1)
+
+Separate height/weight/muscle morphs added together were off by up to 10 cm. Anny's mesh is
+exactly trilinear over its anchor grid, so the GLB carries the 18 corners and the app blends them
+(< 1e-9 mm from Anny). Client height is matched by solving for the height parameter; uniform
+scaling only outside 1.36–2.45 m (male) / 1.22–2.31 m (female). Supersedes "uniform scale to
+client height". Cost: GLB 0.84 → 3.8 MB per body.
+
+### 2026-10-01: Straighten the elbows to 5 degrees
+
+Supersedes "rest pose as exported". The 44.5° rest bend made the inner elbow a crease (designs
+across it 15–31% true to size, up to 38% mirrored). Straightened: 70–97%, 0% mirrored. Done with
+linear blend skinning on the rest shape in the exporter so the 18 shapes stay exactly blendable
+(posing through Anny itself re-centres on the root and adds ~3 mm of blend error).
+
+### 2026-10-01: Auto switches to the cylinder at 72% of the circumference
+
+Supersedes the Phase 0 guess of ~45%. Measured: the surface wrap keeps 98–100% of a design within
+5% up to 66% of the forearm's circumference and starts folding (mirrored areas) at 77–78%. The
+cylinder is worse at every width, so it is used only past 72%, for a full band, or when the surface
+wrap result has more than 0.5% of the design mirrored (checked on every placement; the switch
+point depends on the client's arm, so a fixed threshold alone let a 1.4% fold through).
+
+### 2026-10-01: Background removal works in linear light, white-balanced to the paper
+
+Colour-to-alpha straight against cream paper turned neutral grey wash blue-grey. Dividing by the
+paper colour first (a scan tints ink and paper alike) and treating near-neutral marks as diluted
+black ink keeps grey wash neutral and renders correctly when multiplied into skin. Feathering only
+softens inwards so cleared background never returns as a halo.
+
+### 2026-10-01: pdf.js legacy build
+
+pdf.js 6's default build needs `Map.prototype.getOrInsertComputed`, which current Chrome and iPad
+Safari lack (found by the end-to-end test). The legacy build is transpiled for them.
+
+### 2026-10-01: Skin detail is procedural
+
+Pores, fine bumps and tone variation come from 3D noise in object space (real-world size, no texture
+download, no UV seams). Subsurface scattering is approximated with per-channel wrap lighting (red
+wraps furthest). A "Skin detail" toggle turns both off for slow devices. A photographed skin texture
+set can replace the noise later without touching the ink code.
+
+### 2026-10-01: Expected import problems are not logged as errors
+
+Wrong file types and old `.ai` files are explained in the import dialog. Only unexpected failures go
+to the debug panel's error list, so the list stays useful for troubleshooting.
