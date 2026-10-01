@@ -39,7 +39,7 @@ export async function parseBodyGlb(id: BodyId, glb: ArrayBuffer, skeleton: Skele
 
 export async function fetchRawBody(id: BodyId, baseUrl: string): Promise<RawBody> {
   // VITE_MODELS_AS_TEXT=1 builds load base64 copies (models/<id>.glb.txt) for hosts that refuse
-  // to serve .glb files; scripts/models-as-text.mjs writes them.
+  // to serve .glb files; scripts/strict-host.mjs writes them.
   const asText = import.meta.env.VITE_MODELS_AS_TEXT === '1';
   const [glb, sk] = await Promise.all([
     fetch(`${baseUrl}models/${id}.glb${asText ? '.txt' : ''}`).then(async (r) => {

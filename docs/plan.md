@@ -73,7 +73,7 @@ src/
   debug/       DebugPanel.tsx
   test/        synthetic.ts, designs.ts, fixtures.ts (meshes, images and PDFs built in code)
 tools/         export_bodies.py
-scripts/       e2e.mjs, screenshots.mjs, check-licenses.mjs, models-as-text.mjs
+scripts/       e2e.mjs, screenshots.mjs, check-licenses.mjs, strict-host.mjs
 public/models/ male.glb, female.glb, *.skeleton.json
 docs/          spec, plan, decisions, licenses, regions, phase0 and phase1 reports
 ```
