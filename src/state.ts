@@ -4,7 +4,7 @@ import type { CylMode } from './projection/cylindrical';
 import type { DistortionStats } from './projection/distortion';
 import type { Vec3 } from './projection/vec';
 
-export type Method = 'decal' | 'cylinder' | 'expmap';
+export type Method = 'auto' | 'decal' | 'cylinder' | 'expmap';
 export type CameraPreset = 'front' | 'back' | 'left' | 'right' | 'design' | 'opposite';
 export type Spot = 'forearm' | 'shoulderBlade';
 
@@ -13,18 +13,32 @@ export interface DesignSource {
   name: string;
   /** Pixel aspect (width / height) of an uploaded image. */
   aspect: number;
+  /** The design as placed on skin (background removed). */
   canvas?: HTMLCanvasElement;
+  /** The imported image before background removal, for re-editing. */
+  original?: HTMLCanvasElement;
+  /** Background-removal settings used, for re-editing. */
+  bgOptions?: Partial<import('./bgremove/pipeline').BgOptions>;
 }
 
 export interface Placement {
   point: Vec3;
   normal: Vec3;
+  /**
+   * The same spot pinned to the mesh (welded triangle + barycentric weights), so the design stays
+   * on the same patch of skin when the body is reshaped. Point and normal are the fallback (share links).
+   */
+  triangle?: [number, number, number];
+  bary?: [number, number, number];
 }
 
 export interface AppState {
   bodyId: BodyId;
   /** Client height in meters. */
   clientHeight: number;
+  /** Anny weight and muscle, 0..1 (0.5 = average). */
+  bodyWeight: number;
+  bodyMuscle: number;
   skinTone: string;
   method: Method;
   limbId: string;
@@ -49,6 +63,8 @@ export interface AppState {
   wireframe: boolean;
   debugOpen: boolean;
   ui: boolean;
+  /** Import dialog: closed, open, or open with a file dropped onto the page. */
+  importDialog: { open: boolean; file?: File; edit?: boolean };
   camera: { preset: CameraPreset; nonce: number };
   // Readouts (written by the scene)
   /** Where the design currently sits, for the "frame design" camera. */
@@ -58,6 +74,8 @@ export interface AppState {
   /** Size actually applied (band mode overrides width with the ring circumference), inches. */
   appliedSize: [number, number];
   metrics: DistortionStats | null;
+  /** What the placement actually uses (auto mode picks per spot and size). */
+  resolved: { method: 'expmap' | 'cylinder' | 'decal'; limbLabel: string | null };
   metricsNote: string;
   timings: Record<string, number>;
   status: string;
@@ -73,8 +91,10 @@ export const DEFAULT_HEIGHTS: Record<BodyId, number> = { male: 1.78, female: 1.6
 export const useApp = create<AppState>((set) => ({
   bodyId: 'male',
   clientHeight: DEFAULT_HEIGHTS.male,
+  bodyWeight: 0.5,
+  bodyMuscle: 0.5,
   skinTone: '#d9a57e',
-  method: 'expmap',
+  method: 'auto',
   limbId: 'forearm.L',
   cylMode: 'arc',
   band: false,
@@ -93,11 +113,13 @@ export const useApp = create<AppState>((set) => ({
   wireframe: false,
   debugOpen: false,
   ui: true,
+  importDialog: { open: false },
   camera: { preset: 'front', nonce: 0 },
   focus: null,
   focusOpposite: null,
   appliedSize: [3, 4],
   metrics: null,
+  resolved: { method: 'expmap', limbLabel: null },
   metricsNote: '',
   timings: {},
   status: 'Loading body…',
@@ -111,7 +133,7 @@ export const useApp = create<AppState>((set) => ({
 
 /** State that goes into a share link (everything except uploaded images and readouts). */
 const LINK_KEYS = [
-  'bodyId', 'clientHeight', 'skinTone', 'method', 'limbId', 'cylMode', 'band', 'slide', 'around', 'spot',
+  'bodyId', 'clientHeight', 'bodyWeight', 'bodyMuscle', 'skinTone', 'method', 'limbId', 'cylMode', 'band', 'slide', 'around', 'spot',
   'widthIn', 'heightIn', 'rotationDeg', 'mirror', 'opacity', 'showRegion', 'wireframe', 'debugOpen', 'ui',
 ] as const;
 

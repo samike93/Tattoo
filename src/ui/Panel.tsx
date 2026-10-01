@@ -1,41 +1,22 @@
-import { useRef, type ChangeEvent, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
-import { imageFileToCanvas } from '../phase0/checker';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
 
 const SKIN_TONES = ['#f4d8c4', '#e9bf9f', '#d9a57e', '#b47b52', '#8a5636', '#5c3720', '#3b2214'];
 
 const METHODS: { id: Method; label: string; hint: string }[] = [
-  { id: 'expmap', label: 'Exponential map', hint: 'Recommended for patches anywhere: back, chest, shoulder, and limb patches. Tap the body to place.' },
-  { id: 'cylinder', label: 'Cylindrical wrap', hint: 'For bands and sleeve sections around arms, legs and the neck. Tap a limb to place.' },
-  { id: 'decal', label: 'three.js DecalGeometry', hint: 'Baseline flat projection, for comparison only. Stretches on curves and bleeds through limbs.' },
+  { id: 'auto', label: 'Auto (recommended)', hint: 'Follows the skin anywhere, and wraps around a limb when the design is wide or a full band.' },
+  { id: 'expmap', label: 'Surface (exponential map)', hint: 'Low-distortion patch around the spot you tap. Best for back, chest, shoulders and limb patches.' },
+  { id: 'cylinder', label: 'Cylindrical wrap', hint: 'Wraps around the limb axis. For bands and sleeve sections on arms, legs and the neck.' },
+  { id: 'decal', label: 'Flat projection (three.js decal)', hint: 'The usual web method, for comparison. Stretches on curves and bleeds through limbs.' },
 ];
+const METHOD_NAMES = { expmap: 'Surface wrap', cylinder: 'Cylindrical wrap', decal: 'Flat projection' };
 
 export function Panel() {
   const s = useApp();
-  const fileRef = useRef<HTMLInputElement>(null);
   const ft = Math.floor(s.clientHeight / 0.3048);
   const inch = Math.round((s.clientHeight / INCH) % 12);
-
-  const onFile = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    e.target.value = '';
-    if (!file) return;
-    if (!/^image\/(png|jpeg|webp|svg\+xml)$/.test(file.type)) {
-      s.logError(`Unsupported file type: ${file.type || file.name}`);
-      s.set({ status: 'Phase 0 accepts PNG, JPG, WEBP and SVG. PDF and .ai import come in Phase 1.' });
-      return;
-    }
-    try {
-      const canvas = await imageFileToCanvas(file);
-      const aspect = canvas.width / canvas.height;
-      s.set({ design: { kind: 'image', name: file.name, aspect, canvas }, heightIn: +(s.widthIn / aspect).toFixed(2), lockAspect: true });
-    } catch (err) {
-      s.logError(`Could not read ${file.name}: ${String(err)}`);
-      s.set({ status: `Could not read ${file.name}. Is it a valid image?` });
-    }
-  };
 
   const setWidth = (w: number) => s.set(s.lockAspect ? { widthIn: w, heightIn: +(w / s.design.aspect).toFixed(2) } : { widthIn: w });
   const setHeight = (h: number) => s.set(s.lockAspect ? { heightIn: h, widthIn: +(h * s.design.aspect).toFixed(2) } : { heightIn: h });
@@ -45,7 +26,7 @@ export function Panel() {
     <aside className="panel">
       <header className="panel-head">
         <h1>Tattoo Preview</h1>
-        <span className="tag">Phase 0 test page</span>
+        <span className="tag">Phase 1</span>
       </header>
 
       <Section title="Body">
@@ -64,6 +45,8 @@ export function Panel() {
             <small>({(s.clientHeight * 100).toFixed(0)} cm)</small>
           </span>
         </label>
+        <Slider label="Build" value={s.bodyWeight} min={0} max={1} step={0.05} fmt={(v) => (v < 0.35 ? 'Slim' : v > 0.65 ? 'Heavy' : 'Average')} onChange={(v) => s.set({ bodyWeight: v })} />
+        <Slider label="Muscle" value={s.bodyMuscle} min={0} max={1} step={0.05} fmt={(v) => (v < 0.35 ? 'Soft' : v > 0.65 ? 'Muscular' : 'Average')} onChange={(v) => s.set({ bodyMuscle: v })} />
         <div className="swatches" role="radiogroup" aria-label="Skin tone">
           {SKIN_TONES.map((c) => (
             <button key={c} aria-label={`Skin tone ${c}`} className={s.skinTone === c ? 'on' : ''} style={{ background: c }} onClick={() => s.set({ skinTone: c })} />
@@ -73,17 +56,66 @@ export function Panel() {
       </Section>
 
       <Section title="Design">
-        <div className="seg">
+        <div className="seg wrap">
+          <button className="primary" onClick={() => s.set({ importDialog: { open: true } })}>{s.design.kind === 'image' ? 'Import another…' : 'Import design…'}</button>
+          {s.design.original && <button onClick={() => s.set({ importDialog: { open: true, edit: true } })}>Edit background</button>}
           <button className={s.design.kind === 'checker' ? 'on' : ''} onClick={() => s.set({ design: { kind: 'checker', name: '1-inch checkerboard', aspect: s.widthIn / s.heightIn }, lockAspect: false })}>
             1-inch grid
           </button>
-          <button onClick={() => fileRef.current?.click()}>{s.design.kind === 'image' ? 'Replace image…' : 'Upload image…'}</button>
         </div>
-        <input ref={fileRef} type="file" hidden accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={onFile} />
-        {s.design.kind === 'image' && <p className="hint">{s.design.name}. Ink multiplies into skin, so a white background already disappears.</p>}
+        <p className="hint">{s.design.kind === 'image' ? s.design.name : 'PNG, JPG, SVG, PDF or Illustrator. You can also drop a file anywhere on the page.'}</p>
       </Section>
 
-      <Section title="Placement method">
+      <Section title="Placement">
+        <p className="using">
+          {METHOD_NAMES[s.resolved.method]}
+          {s.resolved.limbLabel ? ` on the ${s.resolved.limbLabel.toLowerCase()}` : ''}
+        </p>
+        <p className="hint">Tap the body to place the design. Drag the design to move it.</p>
+        {s.method !== 'cylinder' && (
+          <div className="seg">
+            <button className={!s.placement && s.spot === 'forearm' ? 'on' : ''} onClick={() => s.set({ spot: 'forearm', placement: null })}>Outer forearm</button>
+            <button className={!s.placement && s.spot === 'shoulderBlade' ? 'on' : ''} onClick={() => s.set({ spot: 'shoulderBlade', placement: null })}>Shoulder blade</button>
+          </div>
+        )}
+        {(s.resolved.limbLabel || s.method === 'cylinder') && s.method !== 'decal' && s.method !== 'expmap' && (
+          <label className="check">
+            <input type="checkbox" checked={s.band} onChange={(e) => s.set({ band: e.target.checked })} /> Full band (all the way around)
+          </label>
+        )}
+      </Section>
+
+
+      <Section title="Size and rotation">
+        <Slider label="Width" value={s.widthIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.resolved.method === 'cylinder' && s.band} />
+        <Slider label="Height" value={s.heightIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setHeight} />
+        <Slider label="Rotation" value={s.rotationDeg} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ rotationDeg: v })} disabled={s.resolved.method === 'cylinder' && s.band} />
+        <Slider label="Opacity" value={s.opacity} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => s.set({ opacity: v })} />
+        <div className="checks">
+          <label className="check"><input type="checkbox" checked={s.lockAspect} onChange={(e) => s.set({ lockAspect: e.target.checked })} /> Lock aspect</label>
+          <label className="check"><input type="checkbox" checked={s.mirror} onChange={(e) => s.set({ mirror: e.target.checked })} /> Mirror</label>
+        </div>
+        <p className="size">{formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
+      </Section>
+
+      <Section title="View">
+        <div className="seg wrap">
+          {(['front', 'back', 'left', 'right', 'design', 'opposite'] as const).map((p) => (
+            <button key={p} onClick={() => s.requestCamera(p)}>
+              {p === 'design' ? 'Frame design' : p === 'opposite' ? 'Behind design' : p[0].toUpperCase() + p.slice(1)}
+            </button>
+          ))}
+        </div>
+        <div className="checks">
+          <label className="check"><input type="checkbox" checked={s.showRegion} onChange={(e) => s.set({ showRegion: e.target.checked })} /> Show wrap region</label>
+          <label className="check"><input type="checkbox" checked={s.wireframe} onChange={(e) => s.set({ wireframe: e.target.checked })} /> Wireframe</label>
+        </div>
+      </Section>
+
+      <Export />
+
+      <details className="section advanced">
+        <summary>Method (advanced)</summary>
         <div className="stack">
           {METHODS.map((m) => (
             <label key={m.id} className={`choice ${s.method === m.id ? 'on' : ''}`}>
@@ -107,9 +139,6 @@ export function Panel() {
             </label>
             <Slider label="Along the limb" value={s.slide} min={0} max={1} step={0.01} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => s.set({ slide: v })} />
             <Slider label="Around the limb" value={s.around} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ around: v })} />
-            <label className="check">
-              <input type="checkbox" checked={s.band} onChange={(e) => s.set({ band: e.target.checked })} /> Full band (close the band all the way round)
-            </label>
             <label className="row">
               <span>Circumference</span>
               <select value={s.cylMode} onChange={(e) => s.set({ cylMode: e.target.value as 'arc' | 'naive' })}>
@@ -119,46 +148,14 @@ export function Panel() {
             </label>
           </>
         )}
-        {s.method !== 'cylinder' && (
-          <>
-            <div className="seg">
-              <button className={!s.placement && s.spot === 'forearm' ? 'on' : ''} onClick={() => s.set({ spot: 'forearm', placement: null })}>Outer forearm</button>
-              <button className={!s.placement && s.spot === 'shoulderBlade' ? 'on' : ''} onClick={() => s.set({ spot: 'shoulderBlade', placement: null })}>Shoulder blade</button>
-            </div>
-            <p className="hint">Or tap / click anywhere on the body to move the design.</p>
-          </>
-        )}
-      </Section>
-
-      <Section title="Size and rotation">
-        <Slider label="Width" value={s.widthIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.method === 'cylinder' && s.band} />
-        <Slider label="Height" value={s.heightIn} min={0.5} max={14} step={0.25} fmt={(v) => `${v} in`} onChange={setHeight} />
-        <Slider label="Rotation" value={s.rotationDeg} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ rotationDeg: v })} disabled={s.method === 'cylinder' && s.band} />
-        <Slider label="Opacity" value={s.opacity} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => s.set({ opacity: v })} />
-        <div className="checks">
-          <label className="check"><input type="checkbox" checked={s.lockAspect} onChange={(e) => s.set({ lockAspect: e.target.checked })} /> Lock aspect</label>
-          <label className="check"><input type="checkbox" checked={s.mirror} onChange={(e) => s.set({ mirror: e.target.checked })} /> Mirror</label>
-        </div>
-        <p className="size">{formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
-      </Section>
-
-      <Section title="View">
-        <div className="seg wrap">
-          {(['front', 'back', 'left', 'right', 'design', 'opposite'] as const).map((p) => (
-            <button key={p} onClick={() => s.requestCamera(p)}>
-              {p === 'design' ? 'Frame design' : p === 'opposite' ? 'Behind design' : p[0].toUpperCase() + p.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="checks">
-          <label className="check"><input type="checkbox" checked={s.showRegion} onChange={(e) => s.set({ showRegion: e.target.checked })} /> Show wrap region</label>
-          <label className="check"><input type="checkbox" checked={s.wireframe} onChange={(e) => s.set({ wireframe: e.target.checked })} /> Wireframe</label>
-        </div>
-      </Section>
-
-      <Metrics />
+        <Metrics />
+      </details>
     </aside>
   );
+}
+
+function Export() {
+  return null;
 }
 
 function Metrics() {
@@ -167,7 +164,8 @@ function Metrics() {
   const pct = (x: number) => `${(100 * x).toFixed(1)}%`;
   const good = m && m.within5 > 0.9 && m.flippedFraction === 0;
   return (
-    <Section title="Distortion (live)">
+    <div className="metrics">
+      <h3>Distortion (live)</h3>
       {m ? (
         <>
           <p className={`verdict ${good ? 'ok' : 'bad'}`}>
@@ -186,7 +184,7 @@ function Metrics() {
         <p className="hint">Waiting for the body…</p>
       )}
       {note && <p className="hint">{note}</p>}
-    </Section>
+    </div>
   );
 }
 

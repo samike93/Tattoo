@@ -71,3 +71,26 @@ export function buildSurface(m: SplitMeshArrays): BodySurface {
 
 export const vertexPos = (s: BodySurface, i: number): Vec3 => [s.positions[3 * i], s.positions[3 * i + 1], s.positions[3 * i + 2]];
 export const vertexNormal = (s: BodySurface, i: number): Vec3 => [s.normals[3 * i], s.normals[3 * i + 1], s.normals[3 * i + 2]];
+
+/** Area-weighted smooth normals on the welded mesh (so UV seams never show as shading creases). */
+export function weldedNormals(positions: ArrayLike<number>, triangles: ArrayLike<number>, vertexCount: number): Float64Array {
+  const n = new Float64Array(3 * vertexCount);
+  for (let t = 0; t < triangles.length; t += 3) {
+    const a = triangles[t], b = triangles[t + 1], c = triangles[t + 2];
+    const ux = positions[3 * b] - positions[3 * a], uy = positions[3 * b + 1] - positions[3 * a + 1], uz = positions[3 * b + 2] - positions[3 * a + 2];
+    const vx = positions[3 * c] - positions[3 * a], vy = positions[3 * c + 1] - positions[3 * a + 1], vz = positions[3 * c + 2] - positions[3 * a + 2];
+    const nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx; // |n| = 2 * area
+    for (const v of [a, b, c]) {
+      n[3 * v] += nx;
+      n[3 * v + 1] += ny;
+      n[3 * v + 2] += nz;
+    }
+  }
+  for (let v = 0; v < vertexCount; v++) {
+    const l = Math.hypot(n[3 * v], n[3 * v + 1], n[3 * v + 2]) || 1;
+    n[3 * v] /= l;
+    n[3 * v + 1] /= l;
+    n[3 * v + 2] /= l;
+  }
+  return n;
+}

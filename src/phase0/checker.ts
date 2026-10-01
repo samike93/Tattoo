@@ -55,32 +55,3 @@ export function drawChecker(widthIn: number, heightIn: number, band = false): HT
   g.fillRect(ox + s * 0.74, oy + s * 0.38, s * 0.08, s * 0.45);
   return c;
 }
-
-/** Rasterise an uploaded image (PNG, JPG, WEBP, SVG) onto a canvas, at most `maxSide` px. */
-export async function imageFileToCanvas(file: File, maxSide = 2048): Promise<HTMLCanvasElement> {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = new Image();
-    img.decoding = 'async';
-    img.src = url;
-    await img.decode();
-    let w = img.naturalWidth || 1024, h = img.naturalHeight || 1024;
-    const k = Math.min(1, maxSide / Math.max(w, h));
-    if (file.type === 'image/svg+xml') {
-      // Vector: rasterise at the full size budget.
-      const s = maxSide / Math.max(w, h);
-      w *= s;
-      h *= s;
-    } else {
-      w *= k;
-      h *= k;
-    }
-    const c = document.createElement('canvas');
-    c.width = Math.round(w);
-    c.height = Math.round(h);
-    c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
-    return c;
-  } finally {
-    URL.revokeObjectURL(url);
-  }
-}

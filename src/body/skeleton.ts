@@ -11,6 +11,8 @@ export interface Skeleton {
   units: string;
   height_m: number;
   bones: Bone[];
+  /** Morph-corner data (see body/shape.ts). Absent on synthetic test skeletons. */
+  shapes?: import('./shape').ShapeData;
 }
 
 export type BodyId = 'male' | 'female';

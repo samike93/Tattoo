@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -7,7 +7,9 @@ import {
   Mesh,
   MeshStandardMaterial,
   PMREMGenerator,
+  Raycaster,
   SRGBColorSpace,
+  Vector3,
   BufferGeometry,
   type Texture,
 } from 'three';
@@ -16,17 +18,19 @@ import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { fetchRawBody, hitFromIntersection, prepareBody, raycastBody, type LoadedBody, type RawBody, type SurfaceHit } from '../body/loadBody';
 import { LIMBS, type BodyId } from '../body/skeleton';
-import { buildLimbFrame, cylCoords, ringCircumference, type LimbFrame } from '../projection/cylindrical';
+import { buildLimbFrame, cylCoords, ringCircumference, type CylPlacement, type LimbFrame } from '../projection/cylindrical';
 import { buildDecal, decalSamples } from '../projection/decal';
-import { INCH, type DesignTransform } from '../projection/design';
+import { designUV, INCH, type DesignTransform } from '../projection/design';
+import type { DistortionStats } from '../projection/distortion';
 import { cylinderSamples, measureSamples, vertexCoordSamples } from '../projection/evaluate';
-import { computeExpMap } from '../projection/expmap';
+import { computeExpMapAsync, setExpMapSurface } from '../projection/expmapClient';
+import { chooseMethod, limbAt } from '../placement/resolve';
 import { createSkinMaterial, setCylinderUniforms, setDesignUniforms } from '../ink/skinMaterial';
 import { drawChecker } from '../phase0/checker';
 import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
 import { useApp, type AppState, type Spot } from '../state';
-import { add, scale, type Vec3 } from '../projection/vec';
+import { add, dot, normalize, scale, sub, tangentFrame, type Vec3 } from '../projection/vec';
 
 // three-mesh-bvh: fast raycasts on the body (tapping to place a design).
 type BvhGeometry = BufferGeometry & { computeBoundsTree: typeof computeBoundsTree; disposeBoundsTree: typeof disposeBoundsTree };
@@ -42,7 +46,10 @@ function loadRaw(id: BodyId) {
 
 export function Scene() {
   const bodyId = useApp((s) => s.bodyId);
-  const clientHeight = useApp((s) => s.clientHeight);
+  // Deferred so dragging a body-shape slider stays smooth: the reshape catches up between frames.
+  const clientHeight = useDeferredValue(useApp((s) => s.clientHeight));
+  const bodyWeight = useDeferredValue(useApp((s) => s.bodyWeight));
+  const bodyMuscle = useDeferredValue(useApp((s) => s.bodyMuscle));
   const [raw, setRaw] = useState<RawBody | null>(null);
 
   useEffect(() => {
@@ -68,11 +75,11 @@ export function Scene() {
   const body = useMemo(() => {
     if (!raw || raw.id !== bodyId) return null;
     const t0 = performance.now();
-    const b = prepareBody(raw, clientHeight);
+    const b = prepareBody(raw, { heightM: clientHeight, weight: bodyWeight, muscle: bodyMuscle });
     (b.geometry as BvhGeometry).computeBoundsTree();
     useApp.getState().setTiming('bodyPrepareMs', performance.now() - t0);
     return b;
-  }, [raw, bodyId, clientHeight]);
+  }, [raw, bodyId, clientHeight, bodyWeight, bodyMuscle]);
 
   useEffect(() => () => (body?.geometry as BvhGeometry | undefined)?.disposeBoundsTree(), [body]);
 
@@ -82,6 +89,7 @@ export function Scene() {
       <CameraRig body={body} />
       {body && <Body body={body} />}
       <FrameStats />
+      <TestHooks body={body} />
     </>
   );
 }
@@ -152,6 +160,26 @@ function CameraRig({ body }: { body: LoadedBody | null }) {
   return null;
 }
 
+/** Hooks for automated tests and console debugging: window.tattoo.project(p) and .bodyHeight(). */
+function TestHooks({ body }: { body: LoadedBody | null }) {
+  const camera = useThree((s) => s.camera);
+  const dom = useThree((s) => s.gl.domElement);
+  useEffect(() => {
+    const t = (window as unknown as { tattoo: Record<string, unknown> }).tattoo;
+    if (!t) return;
+    t.project = (p: Vec3) => {
+      const v = new Vector3(...p).project(camera);
+      const r = dom.getBoundingClientRect();
+      return { x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height };
+    };
+    t.bodyHeight = () => {
+      const bb = body?.geometry.boundingBox;
+      return bb ? bb.max.y - bb.min.y : NaN;
+    };
+  }, [camera, dom, body]);
+  return null;
+}
+
 function FrameStats() {
   const gl = useThree((s) => s.gl);
   const acc = useRef({ frames: 0, t: performance.now() });
@@ -189,6 +217,11 @@ function Body({ body }: { body: LoadedBody }) {
   const designTexRef = useRef<{ key: string; tex: Texture } | null>(null);
   const decalMat = useMemo(() => new MeshStandardMaterial({ transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, roughness: 0.55 }), []);
   const wireframe = useApp((s) => s.wireframe);
+  const controls = useThree((s) => s.controls) as { enabled: boolean } | null;
+  /** What is currently drawn, for hit-testing drags. */
+  const live = useRef<{ kind: 'none' } | { kind: 'cylinder'; frame: LimbFrame; pl: CylPlacement; tf: DesignTransform } | { kind: 'expmap'; coords: Float64Array; tf: DesignTransform } | { kind: 'decal'; hit: SurfaceHit; tf: DesignTransform }>({ kind: 'none' });
+  const seq = useRef(0);
+  const drag = useRef<{ offset: Vec3; pointerId: number } | null>(null);
 
   const shared = useApp(useShallow((s: AppState): Shared => ({
     method: s.method, limbId: s.limbId, cylMode: s.cylMode, band: s.band, slide: s.slide, around: s.around,
@@ -205,11 +238,21 @@ function Body({ body }: { body: LoadedBody }) {
     return frames.get(id)!;
   };
 
+  useEffect(() => {
+    setExpMapSurface(`${body.id}:${body.skeleton.height_m}:${body.surface.positions[0]}:${body.surface.positions[300]}`, body.surface);
+  }, [body]);
+
   // Recompute placement, uniforms and metrics whenever anything relevant changes.
   useEffect(() => {
     const mesh = meshRef.current;
     if (!mesh) return;
+    const my = ++seq.current;
     const app = useApp.getState();
+    const fail = (e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e);
+      app.logError(msg);
+      app.set({ status: `Error: ${msg}` });
+    };
     try {
       const t0 = performance.now();
       material.color = new Color(shared.skinTone);
@@ -217,22 +260,44 @@ function Body({ body }: { body: LoadedBody }) {
       const inkCoord = geo.getAttribute('inkCoord');
       const inkMask = geo.getAttribute('inkMask');
       const vid = body.surface.vid;
-      let width = shared.widthIn * INCH;
       const height = shared.heightIn * INCH;
-      let note = '';
-      let frame: LimbFrame | null = null;
-      let centerT = 0;
-      if (shared.method === 'cylinder') {
-        frame = frameFor(shared.limbId);
-        centerT = shared.slide * frame.length;
-        if (shared.band) width = ringCircumference(frame, centerT);
-      }
-      const tf: DesignTransform = { width, height, rotation: (shared.rotationDeg * Math.PI) / 180, mirror: shared.mirror, band: shared.method === 'cylinder' && shared.band };
+      let width = shared.widthIn * INCH;
 
-      // Design texture (the checkerboard is redrawn so cells stay exactly 1 inch at any size).
-      const texKey = shared.design.kind === 'checker' ? `checker:${(width / INCH).toFixed(3)}x${shared.heightIn.toFixed(3)}:${tf.band}` : `image:${shared.design.name}:${shared.design.canvas?.width}`;
+      // 1. Where, and with which method.
+      let method: 'expmap' | 'cylinder' | 'decal';
+      let frame: LimbFrame | null = null;
+      let pl: CylPlacement | null = null;
+      let hit: SurfaceHit | null = null;
+      let limbLabel: string | null = null;
+      if (shared.method === 'cylinder') {
+        method = 'cylinder';
+        frame = frameFor(shared.limbId);
+        pl = { centerT: shared.slide * frame.length, centerAngle: (shared.around * Math.PI) / 180, mode: shared.cylMode };
+        limbLabel = frame.limb.label;
+      } else {
+        hit = resolvePlacement(body, mesh, shared.placement) ?? defaultSpot(body, mesh, shared.spot, frameFor('forearm.L'));
+        if (!hit) throw new Error('Could not find a spot on the body for the design');
+        if (shared.method === 'auto') {
+          const choice = chooseMethod(body, hit, width, shared.band, frameFor);
+          method = choice.method;
+          limbLabel = choice.limb?.label ?? null;
+          if (choice.method === 'cylinder' && choice.limb) {
+            frame = frameFor(choice.limb.id);
+            pl = { centerT: choice.centerT!, centerAngle: choice.centerAngle!, mode: 'arc' };
+          }
+        } else {
+          method = shared.method;
+          limbLabel = limbAt(body, hit)?.label ?? null;
+        }
+      }
+      const band = method === 'cylinder' && shared.band;
+      if (band && frame && pl) width = ringCircumference(frame, pl.centerT);
+      const tf: DesignTransform = { width, height, rotation: (shared.rotationDeg * Math.PI) / 180, mirror: shared.mirror, band };
+
+      // 2. Design texture (the checkerboard is redrawn so cells stay exactly 1 inch at any size).
+      const texKey = shared.design.kind === 'checker' ? `checker:${(width / INCH).toFixed(3)}x${shared.heightIn.toFixed(3)}:${band}` : `image:${shared.design.name}:${shared.design.canvas?.width}:${shared.design.canvas?.height}`;
       if (designTexRef.current?.key !== texKey) {
-        const canvas = shared.design.kind === 'checker' ? drawChecker(width / INCH, shared.heightIn, tf.band) : shared.design.canvas!;
+        const canvas = shared.design.kind === 'checker' ? drawChecker(width / INCH, shared.heightIn, band) : shared.design.canvas!;
         const tex = new CanvasTexture(canvas);
         tex.colorSpace = SRGBColorSpace;
         tex.anisotropy = 8;
@@ -240,79 +305,156 @@ function Body({ body }: { body: LoadedBody }) {
         designTexRef.current = { key: texKey, tex };
       }
       const tex = designTexRef.current.tex;
-      uniforms.uInk.value = tex;
-      setDesignUniforms(uniforms, tf, shared.opacity);
-      uniforms.uShowRegion.value = shared.showRegion;
 
-      let metrics = null;
-      let focus: SurfaceHit | null = null;
-      if (shared.method === 'cylinder' && frame) {
-        const pl = { centerT, centerAngle: (shared.around * Math.PI) / 180, mode: shared.cylMode };
+      const finish = (metrics: DistortionStats | null, focus: SurfaceHit | null, note: string) => {
+        uniforms.uInk.value = tex;
+        setDesignUniforms(uniforms, tf, shared.opacity);
+        uniforms.uShowRegion.value = shared.showRegion;
+        const behind = focus && raycastBody(body, mesh, add(focus.point, scale(focus.normal, -0.4)), focus.normal);
+        app.set({
+          metrics,
+          metricsNote: note,
+          resolved: { method, limbLabel },
+          appliedSize: [width / INCH, height / INCH],
+          focus: focus ? { point: focus.point, normal: focus.normal } : null,
+          focusOpposite: behind ? { point: behind.point, normal: behind.normal } : null,
+          status: 'Ready',
+        });
+        app.setTiming('placementMs', performance.now() - t0);
+        if (!framedOnce && focus) {
+          // Open on the design, not the whole body: the placement is the point of the page.
+          framedOnce = true;
+          app.requestCamera('design');
+        }
+      };
+
+      // 3. Apply.
+      if (method === 'cylinder' && frame && pl) {
         setCylinderUniforms(uniforms, frame, pl);
         for (let i = 0; i < vid.length; i++) inkMask.setX(i, frame.vertexMask[vid[i]]);
         inkMask.needsUpdate = true;
         uniforms.uInkMode.value = 2;
-        metrics = measureSamples(cylinderSamples(body.surface, frame, pl, tf), tf, tf.band ? width : undefined);
-        focus = limbSurfacePoint(body, mesh, frame, centerT, pl.centerAngle);
+        live.current = { kind: 'cylinder', frame, pl, tf };
         setDecal(null);
-        note = tf.band ? 'Band mode: the width is set to the ring circumference so the band closes.' : '';
-      } else {
-        const hit = resolvePlacement(body, mesh, shared.placement) ?? defaultSpot(body, mesh, shared.spot, frameFor('forearm.L'));
-        if (!hit) throw new Error('Could not find a spot on the body for the design');
-        focus = hit;
-        if (shared.method === 'expmap') {
-          const em = computeExpMap(body.surface, hit, [0, 1, 0], expmapRadius(tf));
-          app.setTiming('expmapMs', em.ms);
-          app.setTiming('expmapVertices', em.reached);
-          for (let i = 0; i < vid.length; i++) {
-            const x = em.coords[2 * vid[i]], y = em.coords[2 * vid[i] + 1];
-            const ok = Number.isFinite(x);
-            inkCoord.setXY(i, ok ? x : 0, ok ? y : 0);
-            inkMask.setX(i, ok ? 1 : 0);
-          }
-          inkCoord.needsUpdate = true;
-          inkMask.needsUpdate = true;
-          uniforms.uInkMode.value = 1;
-          metrics = measureSamples(vertexCoordSamples(body.surface, em.coords, tf), tf);
-          setDecal(null);
-        } else {
-          uniforms.uInkMode.value = 0;
-          const t1 = performance.now();
-          const g = buildDecal(mesh, hit.point, hit.normal, width, height, tf.rotation, Math.max(width, height));
-          app.setTiming('decalMs', performance.now() - t1);
-          decalMat.map = tex;
-          decalMat.needsUpdate = true;
-          metrics = measureSamples(decalSamples(g), tf);
-          setDecal((old) => {
-            old?.dispose();
-            return g;
-          });
-          note = 'three.js DecalGeometry: a flat box projection, shown for comparison. Watch the sides of curved areas and the back of the arm.';
-        }
-      }
-      const behind = focus && raycastBody(body, mesh, add(focus.point, scale(focus.normal, -0.4)), focus.normal);
-      app.set({
-        metrics,
-        metricsNote: note,
-        appliedSize: [width / INCH, height / INCH],
-        focus: focus ? { point: focus.point, normal: focus.normal } : null,
-        focusOpposite: behind ? { point: behind.point, normal: behind.normal } : null,
-        status: 'Ready',
-      });
-      app.setTiming('placementMs', performance.now() - t0);
-      if (!framedOnce && focus) {
-        // Open on the design, not the whole body: the placement is the point of the page.
-        framedOnce = true;
-        app.requestCamera('design');
+        const metrics = measureSamples(cylinderSamples(body.surface, frame, pl, tf), tf, band ? width : undefined);
+        finish(metrics, hit ?? limbSurfacePoint(body, mesh, frame, pl.centerT, pl.centerAngle), band ? 'Full band: the width follows the limb so the band closes exactly.' : `Wraps around the ${frame.limb.label.toLowerCase()}.`);
+      } else if (method === 'expmap' && hit) {
+        const seedHit = hit;
+        computeExpMapAsync(seedHit, [0, 1, 0], expmapRadius(tf))
+          .then((em) => {
+            if (!em || my !== seq.current) return; // superseded by a newer placement
+            app.setTiming('expmapMs', em.ms);
+            app.setTiming('expmapVertices', em.reached);
+            for (let i = 0; i < vid.length; i++) {
+              const x = em.coords[2 * vid[i]], y = em.coords[2 * vid[i] + 1];
+              const ok = Number.isFinite(x);
+              inkCoord.setXY(i, ok ? x : 0, ok ? y : 0);
+              inkMask.setX(i, ok ? 1 : 0);
+            }
+            inkCoord.needsUpdate = true;
+            inkMask.needsUpdate = true;
+            uniforms.uInkMode.value = 1;
+            live.current = { kind: 'expmap', coords: em.coords, tf };
+            setDecal(null);
+            finish(measureSamples(vertexCoordSamples(body.surface, em.coords, tf), tf), seedHit, '');
+          })
+          .catch(fail);
+      } else if (hit) {
+        uniforms.uInkMode.value = 0;
+        const t1 = performance.now();
+        const g = buildDecal(mesh, hit.point, hit.normal, width, height, tf.rotation, Math.max(width, height));
+        app.setTiming('decalMs', performance.now() - t1);
+        decalMat.map = tex;
+        decalMat.needsUpdate = true;
+        live.current = { kind: 'decal', hit, tf };
+        setDecal((old) => {
+          old?.dispose();
+          return g;
+        });
+        finish(measureSamples(decalSamples(g), tf), hit, 'three.js DecalGeometry: a flat box projection, shown for comparison. Watch the sides of curved areas and the back of the arm.');
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      app.logError(msg);
-      app.set({ status: `Error: ${msg}` });
+      fail(e);
     }
   }, [shared, body, material, uniforms, decalMat]);
 
   useEffect(() => () => material.dispose(), [material]);
+
+  /** Is this hit inside the design? Used to start a drag instead of orbiting. */
+  const onDesign = (h: SurfaceHit): boolean => {
+    const L = live.current;
+    let x = NaN, y = NaN, C = 1;
+    if (L.kind === 'cylinder') {
+      const c = cylCoords(L.frame, h.point, L.pl);
+      if (!L.frame.vertexMask[h.triangle[0]]) return false;
+      [x, y, C] = [c.x, c.y, c.C];
+    } else if (L.kind === 'expmap' && h.bary) {
+      x = 0;
+      y = 0;
+      for (let k = 0; k < 3; k++) {
+        x += h.bary[k] * L.coords[2 * h.triangle[k]];
+        y += h.bary[k] * L.coords[2 * h.triangle[k] + 1];
+      }
+    } else if (L.kind === 'decal') {
+      const { e1, e2 } = tangentFrame(L.hit.normal, [0, 1, 0]);
+      const d = sub(h.point, L.hit.point);
+      [x, y] = [dot(d, e1), dot(d, e2)];
+    } else return false;
+    if (!Number.isFinite(x)) return false;
+    const [u, v] = designUV(x, y, C, L.tf);
+    return u >= -0.02 && u <= 1.02 && v >= -0.02 && v <= 1.02;
+  };
+
+  const surfaceHitFromRay = (ray: { origin: Vector3; direction: Vector3 }) => {
+    const mesh = meshRef.current;
+    if (!mesh) return null;
+    const hits = new Raycaster(ray.origin, ray.direction).intersectObject(mesh, false);
+    return hits.length ? hitFromIntersection(body, hits[0]) : null;
+  };
+
+  const moveTo = (h: SurfaceHit) => {
+    const app = useApp.getState();
+    if (app.method === 'cylinder') {
+      const f = frameFor(app.limbId);
+      const c = cylCoords(f, h.point, { centerT: 0, centerAngle: 0, mode: 'arc' });
+      if (!f.vertexMask[h.triangle[0]]) return;
+      app.set({ slide: Math.min(Math.max(c.t / f.length, 0), 1), around: Math.round((c.theta * 180) / Math.PI) });
+    } else {
+      app.set({ placement: toPlacement(h) });
+    }
+  };
+
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    const h = hitFromIntersection(body, e.intersections[0]);
+    if (!h || !onDesign(h)) return;
+    e.stopPropagation();
+    const focus = useApp.getState().focus;
+    drag.current = { offset: focus ? sub(focus.point, h.point) : [0, 0, 0], pointerId: e.pointerId };
+    if (controls) controls.enabled = false; // the gesture moves the design, not the camera
+    (e.target as Element | null)?.setPointerCapture?.(e.pointerId);
+    document.body.style.cursor = 'grabbing';
+  };
+
+  const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (!drag.current) {
+      const h = hitFromIntersection(body, e.intersections[0]);
+      document.body.style.cursor = h && onDesign(h) ? 'grab' : '';
+      return;
+    }
+    const h = surfaceHitFromRay(e.ray);
+    if (!h) return;
+    // Keep the grabbed point under the finger: shift by the grab offset and snap back onto the skin.
+    const target = add(h.point, drag.current.offset);
+    const snapped = raycastBody(body, meshRef.current!, add(target, scale(h.normal, 0.05)), scale(h.normal, -1)) ?? h;
+    moveTo(snapped);
+  };
+
+  const endDrag = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    if (controls) controls.enabled = true;
+    document.body.style.cursor = '';
+  };
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return; // that was an orbit drag, not a tap
@@ -322,23 +464,33 @@ function Body({ body }: { body: LoadedBody }) {
     const app = useApp.getState();
     if (app.method === 'cylinder') {
       // Tap a limb: pick it and move the design there.
-      const boneName = body.skeleton.bones[body.surface.bone[hit.triangle[0]]]?.name;
-      const limb = LIMBS.find((l) => l.bones.includes(boneName));
+      const limb = limbAt(body, hit);
       if (!limb) {
-        app.set({ status: 'Cylindrical wrap works on arms, legs and the neck. Tap a limb, or switch to Exponential map.' });
+        app.set({ status: 'Cylindrical wrap works on arms, legs and the neck. Tap a limb, or switch to Auto.' });
         return;
       }
       const f = frameFor(limb.id);
       const c = cylCoords(f, hit.point, { centerT: 0, centerAngle: 0, mode: 'arc' });
       app.set({ limbId: limb.id, slide: Math.min(Math.max(c.t / f.length, 0), 1), around: Math.round((c.theta * 180) / Math.PI) });
     } else {
-      app.set({ placement: { point: hit.point, normal: hit.normal } });
+      app.set({ placement: toPlacement(hit) });
     }
   };
 
   return (
     <>
-      <mesh ref={meshRef} geometry={body.geometry} material={material} onClick={onClick} />
+      <mesh
+        ref={meshRef}
+        geometry={body.geometry}
+        material={material}
+        onClick={onClick}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onPointerLeave={() => !drag.current && (document.body.style.cursor = '')}
+        onLostPointerCapture={endDrag}
+      />
       {wireframe && (
         <mesh geometry={body.geometry}>
           <meshBasicMaterial wireframe color="#000" transparent opacity={0.12} />
@@ -351,8 +503,21 @@ function Body({ body }: { body: LoadedBody }) {
 
 function resolvePlacement(body: LoadedBody, mesh: Mesh, p: AppState['placement']): SurfaceHit | null {
   if (!p) return null;
+  if (p.triangle && p.bary && p.triangle.every((v) => v < body.surface.vertexCount)) {
+    // Pinned to the mesh: same skin, whatever the body shape.
+    const point: Vec3 = [0, 0, 0], normal: Vec3 = [0, 0, 0];
+    for (let k = 0; k < 3; k++) {
+      for (let j = 0; j < 3; j++) {
+        point[j] += p.bary[k] * body.surface.positions[3 * p.triangle[k] + j];
+        normal[j] += p.bary[k] * body.surface.normals[3 * p.triangle[k] + j];
+      }
+    }
+    return { point, normal: normalize(normal), triangle: p.triangle, bary: p.bary };
+  }
   return raycastBody(body, mesh, add(p.point, scale(p.normal, 0.03)), scale(p.normal, -1));
 }
+
+const toPlacement = (h: SurfaceHit) => ({ point: h.point, normal: h.normal, triangle: h.triangle, bary: h.bary });
 
 function defaultSpot(body: LoadedBody, mesh: Mesh, spot: Spot, forearm: LimbFrame): SurfaceHit | null {
   if (spot === 'shoulderBlade') return shoulderBladePoint(body, mesh);

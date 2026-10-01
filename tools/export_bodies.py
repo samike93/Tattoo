@@ -1,7 +1,7 @@
 """Export the male and female base bodies from Anny (Apache 2.0, MakeHuman CC0 assets) to GLB.
 
 Usage:
-    pip install anny trimesh pillow   # plus torch
+    pip install anny trimesh pillow scipy   # plus torch
     python tools/export_bodies.py --out public/models
 
 For each body this writes:
@@ -10,8 +10,13 @@ For each body this writes:
                           _VID  (original welded vertex index, so the app can rebuild
                                  the connected surface across UV seams),
                           _BONE (index of the bone with the largest skin weight).
+                          18 morph targets: the corners of Anny's height x weight x muscle
+                          anchor grid (2 x 3 x 3). Anny's mesh is exactly trilinear between
+                          these corners, so the app reproduces any body shape in that range
+                          (checked: < 1e-9 mm error) without shipping Anny itself.
     <name>.skeleton.json  bone labels, parents and joint (bone head) positions in the
-                          same frame. Used for the cylindrical-wrap limb axes.
+                          same frame, plus joint positions for every morph corner. Used for
+                          the cylindrical-wrap limb axes.
 
 Non-skin geometry (eye backs, eye sockets, mouth cavity, tongue) is removed using
 Anny's UV body-part segmentation.
@@ -31,6 +36,9 @@ import yaml
 import anny
 
 DROP_PARTS = {"eye_back.L", "eye_back.R", "eye_cavity.L", "eye_cavity.R", "mouth_cavity", "tongue"}
+
+# Anny's anchor grid for the shape phenotypes we expose (see PHENOTYPE_VARIATIONS in anny).
+SHAPE_GRID = {"height": [0.0, 1.0], "weight": [0.0, 0.5, 1.0], "muscle": [0.0, 0.5, 1.0]}
 
 BODIES = {
     # Anny phenotypes are in [0, 1]. gender: 0 = male, 1 = female.
@@ -55,8 +63,8 @@ def face_segments(model):
     return np.array(names)[nearest]
 
 
-def write_glb(path, attributes, indices):
-    """Minimal glTF 2.0 binary writer (no extra dependency)."""
+def write_glb(path, attributes, indices, morph_targets=(), target_names=()):
+    """Minimal glTF 2.0 binary writer (no extra dependency). Morph targets are POSITION deltas."""
     blobs, views, accessors, attr_map = [], [], [], {}
     offset = 0
 
@@ -78,13 +86,20 @@ def write_glb(path, attributes, indices):
         type_ = {1: "SCALAR", 2: "VEC2", 3: "VEC3"}[1 if arr.ndim == 1 else arr.shape[1]]
         attr_map[name] = add(arr.astype(np.float32), 34962, 5126, type_, minmax=(name == "POSITION"))
     idx = add(indices.astype(np.uint32).reshape(-1), 34963, 5125, "SCALAR")
+    targets = [{"POSITION": add(t.astype(np.float32), 34962, 5126, "VEC3", minmax=True)} for t in morph_targets]
+    primitive = {"attributes": attr_map, "indices": idx, "material": 0}
+    mesh = {"name": "skin", "primitives": [primitive]}
+    if targets:
+        primitive["targets"] = targets
+        mesh["weights"] = [0.0] * len(targets)
+        mesh["extras"] = {"targetNames": list(target_names)}
 
     gltf = {
         "asset": {"version": "2.0", "generator": "tattoo/tools/export_bodies.py (Anny)"},
         "scene": 0,
         "scenes": [{"nodes": [0]}],
         "nodes": [{"mesh": 0, "name": "body"}],
-        "meshes": [{"name": "skin", "primitives": [{"attributes": attr_map, "indices": idx, "material": 0}]}],
+        "meshes": [mesh],
         "materials": [{"name": "skin", "pbrMetallicRoughness": {"baseColorFactor": [0.8, 0.62, 0.52, 1], "metallicFactor": 0, "roughnessFactor": 0.6}}],
         "buffers": [{"byteLength": offset}],
         "bufferViews": views,
@@ -105,13 +120,80 @@ def to_gltf_frame(p):
     return np.stack([p[..., 0], p[..., 2], -p[..., 1]], axis=-1)
 
 
-def export(model, name, phenotype, out_dir):
+# Anny's rest pose bends the elbows ~44 degrees, which folds the inner-elbow skin into a crease
+# (designs across it measured 15-30% true to size). Consults are done with the arm straight, so
+# we straighten the elbows, keeping a natural few degrees of bend.
+ELBOW_KEEP_DEG = 5.0
+
+
+def rodrigues(axis, angle):
+    k = np.array([[0, -axis[2], axis[1]], [axis[2], 0, -axis[0]], [-axis[1], axis[0], 0]])
+    return np.eye(3) + np.sin(angle) * k + (1 - np.cos(angle)) * (k @ k)
+
+
+def elbow_rotations(model, heads):
+    """World rotation per arm that straightens the elbow (computed once, on the base shape)."""
+    labels = model.bone_labels
+    rots = {}
+    for side in "LR":
+        sh, el, wr = (heads[labels.index(f"{b}.{side}")] for b in ("upperarm01", "lowerarm01", "wrist"))
+        u = (el - sh) / np.linalg.norm(el - sh)
+        f = (wr - el) / np.linalg.norm(wr - el)
+        angle = np.arccos(np.clip(u @ f, -1, 1)) - np.radians(ELBOW_KEEP_DEG)
+        axis = np.cross(f, u)
+        rots[side] = rodrigues(axis / np.linalg.norm(axis), angle)
+    return rots
+
+
+def descendants(model, root):
+    parents = list(model.bone_parents)
+    out = {root}
+    changed = True
+    while changed:
+        changed = False
+        for i, p in enumerate(parents):
+            if p in out and i not in out:
+                out.add(i)
+                changed = True
+    return sorted(out)
+
+
+def straighten_elbows(model, verts, heads, rots):
+    """
+    Linear blend skinning of a fixed world rotation about each elbow joint. Same deformation Anny's
+    own posing applies, but done on the rest shape so the result stays exactly trilinear in the
+    shape parameters (Anny's posing re-centres on the root, which adds ~3 mm of blend error).
+    """
+    labels = model.bone_labels
+    bi = model.vertex_bone_indices.cpu().numpy()
+    bw = model.vertex_bone_weights.cpu().numpy()
+    verts, heads = verts.copy(), heads.copy()
+    for side, R in rots.items():
+        elbow = heads[labels.index(f"lowerarm01.{side}")].copy()
+        chain = descendants(model, labels.index(f"lowerarm01.{side}"))
+        w = (np.isin(bi, chain) * bw).sum(axis=1)[:, None]
+        rotated = (verts - elbow) @ R.T + elbow
+        verts = verts + w * (rotated - verts)
+        heads[chain] = (heads[chain] - elbow) @ R.T + elbow
+    return verts, heads
+
+
+def shape(model, phenotype, rots=None):
+    """Vertices and joints for a phenotype, glTF frame, elbows straightened, feet on y = 0."""
     out = model(phenotype_kwargs=phenotype)
-    verts = to_gltf_frame(out["rest_vertices"][0].detach().cpu().numpy())
-    heads = to_gltf_frame(out["rest_bone_heads"][0].detach().cpu().numpy())
+    verts = out["rest_vertices"][0].detach().cpu().numpy().astype(np.float64)
+    heads = out["rest_bone_heads"][0].detach().cpu().numpy().astype(np.float64)
+    rots = rots if rots is not None else elbow_rotations(model, heads)
+    verts, heads = straighten_elbows(model, verts, heads, rots)
+    verts, heads = to_gltf_frame(verts), to_gltf_frame(heads)
     floor = verts[:, 1].min()
     verts[:, 1] -= floor
     heads[:, 1] -= floor
+    return verts, heads, rots
+
+
+def export(model, name, phenotype, out_dir):
+    verts, heads, rots = shape(model, phenotype)
 
     faces = model.faces.cpu().numpy()
     fuv = model.face_texture_coordinate_indices.cpu().numpy()
@@ -133,6 +215,16 @@ def export(model, name, phenotype, out_dir):
     bone_i = model.vertex_bone_indices.cpu().numpy()
     dominant = bone_i[np.arange(len(bone_i)), bone_w.argmax(1)]
 
+    corners, targets, names = [], [], []
+    for h in SHAPE_GRID["height"]:
+        for w in SHAPE_GRID["weight"]:
+            for m in SHAPE_GRID["muscle"]:
+                cv, ch, _ = shape(model, {**phenotype, "height": h, "weight": w, "muscle": m}, rots)
+                targets.append((cv - verts)[vid])
+                names.append(f"height={h},weight={w},muscle={m}")
+                corners.append({"height": h, "weight": w, "muscle": m, "height_m": float(cv[:, 1].max()),
+                                "heads": ch.round(5).tolist()})
+
     write_glb(
         out_dir / f"{name}.glb",
         {
@@ -143,16 +235,20 @@ def export(model, name, phenotype, out_dir):
             "_BONE": dominant[vid].astype(np.float32),
         },
         inverse.reshape(-1, 3),
+        targets,
+        names,
     )
     skeleton = {
         "source": "Anny (NAVER LABS Europe, Apache-2.0) with MakeHuman/MPFB2 CC0 assets",
         "phenotype": phenotype,
         "units": "meters",
+        "pose": f"Anny rest pose (A-pose) with elbows straightened to {ELBOW_KEEP_DEG:g} degrees of bend",
         "height_m": float(verts[:, 1].max()),
         "bones": [
             {"name": n, "parent": int(p), "head": heads[i].round(5).tolist()}
             for i, (n, p) in enumerate(zip(model.bone_labels, model.bone_parents))
         ],
+        "shapes": {"grid": SHAPE_GRID, "base": {k: phenotype[k] for k in SHAPE_GRID}, "corners": corners},
     }
     (out_dir / f"{name}.skeleton.json").write_text(json.dumps(skeleton, indent=1))
     print(f"{name}: {len(vid)} vertices, {len(faces)} faces, height {skeleton['height_m']:.3f} m")
@@ -164,7 +260,7 @@ def main():
     args = ap.parse_args()
     out_dir = Path(args.out)
     out_dir.mkdir(parents=True, exist_ok=True)
-    model = anny.Anny().to(dtype=torch.float32)
+    model = anny.Anny().to(dtype=torch.float64)
     for name, ph in BODIES.items():
         export(model, name, ph, out_dir)
 

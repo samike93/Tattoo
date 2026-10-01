@@ -3,6 +3,7 @@ import { Canvas } from '@react-three/fiber';
 import { Panel } from './ui/Panel';
 import { Scene } from './ui/Scene';
 import { DebugPanel } from './debug/DebugPanel';
+import { ImportDialog } from './ui/ImportDialog';
 import { hashToState, stateToHash, useApp } from './state';
 
 export function App() {
@@ -32,7 +33,21 @@ export function App() {
       if (e.key === 'd' || e.key === 'D') useApp.getState().set({ debugOpen: !useApp.getState().debugOpen });
     };
     window.addEventListener('keydown', onKey);
+    // Drop a design anywhere on the page.
+    const onDragOver = (e: DragEvent) => {
+      if (e.dataTransfer?.types.includes('Files')) e.preventDefault();
+    };
+    const onDrop = (e: DragEvent) => {
+      const file = e.dataTransfer?.files[0];
+      if (!file || useApp.getState().importDialog.open) return;
+      e.preventDefault();
+      useApp.getState().set({ importDialog: { open: true, file } });
+    };
+    window.addEventListener('dragover', onDragOver);
+    window.addEventListener('drop', onDrop);
     return () => {
+      window.removeEventListener('dragover', onDragOver);
+      window.removeEventListener('drop', onDrop);
       window.removeEventListener('hashchange', apply);
       window.removeEventListener('keydown', onKey);
       unsub();
@@ -58,6 +73,7 @@ export function App() {
       </main>
       {ui && <Panel />}
       <DebugPanel />
+      <ImportDialog />
     </div>
   );
 }

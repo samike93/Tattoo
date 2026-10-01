@@ -84,6 +84,22 @@ export function runStudy(body: LoadedBody): StudyRow[] {
     rows.push({ body: body.id, scenario: 'Forearm full band, 1.5 in', method: 'three.js DecalGeometry', note: 'not possible: a box projection cannot wrap around a limb' });
   }
 
+  // 2b) Across the inner elbow, 3 x 5 in (Phase 1: does the surface wrap handle a joint?).
+  {
+    const tfe = patch(3, 5);
+    const scenario = 'Across the inner elbow, 3×5 in';
+    const hit = limbSurfacePoint(body, mesh, f, 0, 0);
+    if (hit) {
+      const t0 = performance.now();
+      const em = computeExpMap(body.surface, hit, [0, 1, 0], expmapRadius(tfe));
+      rows.push({ body: body.id, scenario, method: 'Exponential map', stats: measureSamples(vertexCoordSamples(body.surface, em.coords, tfe), tfe), ms: performance.now() - t0 });
+      const geo = buildDecal(mesh, hit.point, hit.normal, tfe.width, tfe.height, 0, Math.max(tfe.width, tfe.height));
+      rows.push({ body: body.id, scenario, method: 'three.js DecalGeometry', stats: measureSamples(decalSamples(geo), tfe) });
+      const cyl = measureSamples(cylinderSamples(body.surface, f, { centerT: 0, centerAngle: 0, mode: 'arc' }, tfe), tfe);
+      rows.push({ body: body.id, scenario, method: 'Cylindrical (forearm only)', stats: cyl, note: 'covers only the forearm half: the upper-arm skin is outside its region' });
+    }
+  }
+
   // 3) Shoulder blade, 4 x 4 in.
   {
     const tfb = patch(4, 4);

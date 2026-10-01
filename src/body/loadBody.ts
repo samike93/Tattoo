@@ -1,7 +1,8 @@
 import { BufferAttribute, BufferGeometry, Mesh, Raycaster, Triangle, Vector3, type Intersection } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
-import { buildSurface, type BodySurface } from './surface';
+import { buildSurface, weldedNormals, type BodySurface } from './surface';
 import { scaleSkeleton, type BodyId, type Skeleton } from './skeleton';
+import { applyShape, type ShapeParams } from './shape';
 import { normalize, type Vec3 } from '../projection/vec';
 
 export interface LoadedBody {
@@ -11,8 +12,10 @@ export interface LoadedBody {
   skeleton: Skeleton;
   /** Height of the model as exported, meters. */
   nativeHeight: number;
-  /** Uniform scale applied to reach the requested client height. */
+  /** Uniform scale applied on top of the body shape (1 unless the client is outside Anny's range). */
   scale: number;
+  /** Anny height phenotype used (0..1), when the GLB carries shape morphs. */
+  heightPhenotype?: number;
 }
 
 export interface RawBody {
@@ -55,14 +58,36 @@ export async function fetchRawBody(id: BodyId, baseUrl: string): Promise<RawBody
   return parseBodyGlb(id, glb, sk);
 }
 
-/** Scale the raw body to the client's height (uniform scale for now) and build the welded surface. */
-export function prepareBody(raw: RawBody, heightM?: number): LoadedBody {
+/**
+ * Shape the raw body for the client (height, weight, muscle) and build the welded surface.
+ * With shape morphs (current GLBs) the shape is exact Anny; older GLBs fall back to uniform scaling.
+ */
+export function prepareBody(raw: RawBody, shape: Partial<ShapeParams> = {}): LoadedBody {
   const nativeHeight = raw.skeleton.height_m;
-  const k = heightM && heightM > 0.5 ? heightM / nativeHeight : 1;
   const geometry = raw.geometry.clone();
-  if (k !== 1) geometry.scale(k, k, k);
-  geometry.computeBoundingBox();
-  geometry.computeBoundingSphere();
+  const morphs = raw.geometry.morphAttributes.position ?? [];
+  geometry.morphAttributes = {};
+  let skeleton: Skeleton;
+  let scale = 1;
+  let heightPhenotype: number | undefined;
+  if (raw.skeleton.shapes && morphs.length === raw.skeleton.shapes.corners.length) {
+    const r = applyShape(
+      raw.geometry.getAttribute('position').array as ArrayLike<number>,
+      morphs.map((m) => m.array as ArrayLike<number>),
+      raw.skeleton,
+      raw.skeleton.shapes,
+      { heightM: shape.heightM, weight: shape.weight ?? 0.5, muscle: shape.muscle ?? 0.5 },
+    );
+    geometry.setAttribute('position', new BufferAttribute(r.positions, 3));
+    skeleton = r.skeleton;
+    scale = r.scale;
+    heightPhenotype = r.heightPhenotype;
+  } else {
+    const k = shape.heightM && shape.heightM > 0.5 ? shape.heightM / nativeHeight : 1;
+    if (k !== 1) geometry.scale(k, k, k);
+    skeleton = scaleSkeleton(raw.skeleton, k);
+    scale = k;
+  }
   const surface = buildSurface({
     position: geometry.getAttribute('position').array as ArrayLike<number>,
     normal: geometry.getAttribute('normal').array as ArrayLike<number>,
@@ -70,11 +95,18 @@ export function prepareBody(raw: RawBody, heightM?: number): LoadedBody {
     vid: geometry.getAttribute('_vid').array as ArrayLike<number>,
     bone: geometry.getAttribute('_bone').array as ArrayLike<number>,
   });
+  // The shape changed, so recompute smooth normals on the welded mesh and copy them to split vertices.
+  surface.normals = weldedNormals(surface.positions, surface.triangles, surface.vertexCount);
+  const split = new Float32Array(3 * surface.vid.length);
+  for (let i = 0; i < surface.vid.length; i++) split.set(surface.normals.subarray(3 * surface.vid[i], 3 * surface.vid[i] + 3), 3 * i);
+  geometry.setAttribute('normal', new BufferAttribute(split, 3));
+  geometry.computeBoundingBox();
+  geometry.computeBoundingSphere();
   // Per-vertex ink attributes, written by the placement code.
   const count = geometry.getAttribute('position').count;
   geometry.setAttribute('inkCoord', new BufferAttribute(new Float32Array(2 * count), 2));
   geometry.setAttribute('inkMask', new BufferAttribute(new Float32Array(count), 1));
-  return { id: raw.id, geometry, surface, skeleton: scaleSkeleton(raw.skeleton, k), nativeHeight, scale: k };
+  return { id: raw.id, geometry, surface, skeleton, nativeHeight, scale, heightPhenotype };
 }
 
 export interface SurfaceHit {
@@ -82,6 +114,8 @@ export interface SurfaceHit {
   normal: Vec3;
   /** Welded vertex ids of the hit triangle. */
   triangle: [number, number, number];
+  /** Barycentric coordinates of the point in that triangle. */
+  bary?: [number, number, number];
 }
 
 /** Convert a three.js mesh intersection into a surface hit with a smooth (interpolated) normal. */
@@ -104,6 +138,7 @@ export function hitFromIntersection(body: LoadedBody, hit: Intersection): Surfac
     point: [hit.point.x, hit.point.y, hit.point.z],
     normal: normalize([n.x, n.y, n.z]),
     triangle: [vid[a], vid[b], vid[c]],
+    bary: [bary.x, bary.y, bary.z],
   };
 }
 

@@ -4,17 +4,17 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
-   "triangles": 107,
-   "skinArea": 0.01112514860764807,
+   "triangles": 106,
+   "skinArea": 0.01093214055818498,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 2.0528947393809482,
-   "sizeErrP95": 7.730209185952864,
-   "sizeErrMax": 29.883621871283335,
-   "anisoMean": 2.052894113358485,
-   "anisoP95": 7.730203688131295,
-   "within5": 0.359884325485388,
-   "flippedFraction": 0.2213221354582324,
-   "meanScale": 2.026447440522414
+   "sizeErrMean": 1.9465985010312146,
+   "sizeErrP95": 7.135444393008598,
+   "sizeErrMax": 40.18100505612064,
+   "anisoMean": 1.9465982415942056,
+   "anisoP95": 7.135441258687033,
+   "within5": 0.39121243581835885,
+   "flippedFraction": 0.20608347794635568,
+   "meanScale": 1.9732992916925438
   }
  },
  {
@@ -22,36 +22,36 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Exponential map",
   "stats": {
-   "triangles": 34,
-   "skinArea": 0.008519596168440363,
+   "triangles": 30,
+   "skinArea": 0.007523173177159108,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.014192074326794485,
-   "sizeErrP95": 0.05856388597501816,
-   "sizeErrMax": 0.05967198887737024,
-   "anisoMean": 0.016307685172153297,
-   "anisoP95": 0.05862644968028308,
-   "within5": 0.9087826898253707,
+   "sizeErrMean": 0.011808779397871855,
+   "sizeErrP95": 0.05809316028069622,
+   "sizeErrMax": 0.05913097132291689,
+   "anisoMean": 0.013252649797938732,
+   "anisoP95": 0.05810713738798623,
+   "within5": 0.9351986670236012,
    "flippedFraction": 0,
-   "meanScale": 1.006059525147727
+   "meanScale": 1.0051971945751892
   },
-  "ms": 15.126394000000005
+  "ms": 12.805754999999976
  },
  {
   "body": "male",
   "scenario": "Forearm front, 3×4 in",
   "method": "Cylindrical, joint axis (θ·r)",
   "stats": {
-   "triangles": 35,
-   "skinArea": 0.008723548698806994,
+   "triangles": 36,
+   "skinArea": 0.00899670755598685,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.05996486711998135,
-   "sizeErrP95": 0.2125723316782817,
-   "sizeErrMax": 0.21895644540680514,
-   "anisoMean": 0.09120671275875411,
-   "anisoP95": 0.2496748148564798,
-   "within5": 0.20316969150057784,
+   "sizeErrMean": 0.06225173626869445,
+   "sizeErrP95": 0.22098541089649326,
+   "sizeErrMax": 0.2276421349596125,
+   "anisoMean": 0.09384897198101987,
+   "anisoP95": 0.25990259588145803,
+   "within5": 0.19700098875511018,
    "flippedFraction": 0,
-   "meanScale": 1.0033065527626068
+   "meanScale": 1.004487782476352
   }
  },
  {
@@ -59,17 +59,17 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Cylindrical, fitted axis (θ·r)",
   "stats": {
-   "triangles": 34,
-   "skinArea": 0.00851494187471987,
+   "triangles": 33,
+   "skinArea": 0.00827877692387666,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.060001983225657224,
-   "sizeErrP95": 0.11968058488974409,
-   "sizeErrMax": 0.13749506025030112,
-   "anisoMean": 0.07939755505833265,
-   "anisoP95": 0.14933525271299608,
-   "within5": 0.24722658356364324,
+   "sizeErrMean": 0.05756236795553667,
+   "sizeErrP95": 0.11316825944861675,
+   "sizeErrMax": 0.14216405079227745,
+   "anisoMean": 0.0774070008954867,
+   "anisoP95": 0.15567739098006617,
+   "within5": 0.25750338802975326,
    "flippedFraction": 0,
-   "meanScale": 0.9836841329060838
+   "meanScale": 0.983403618454964
   }
  },
  {
@@ -77,17 +77,17 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Cylindrical, joint axis (arc length)",
   "stats": {
-   "triangles": 35,
-   "skinArea": 0.008723548698806994,
+   "triangles": 36,
+   "skinArea": 0.00899670755598685,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.032808158367325015,
-   "sizeErrP95": 0.07913241744510902,
-   "sizeErrMax": 0.07984138361571769,
-   "anisoMean": 0.06589685594688345,
-   "anisoP95": 0.16459882537670745,
-   "within5": 0.5067939784070976,
+   "sizeErrMean": 0.033895455886742344,
+   "sizeErrP95": 0.07824076465517571,
+   "sizeErrMax": 0.08235163332143758,
+   "anisoMean": 0.06816725359437922,
+   "anisoP95": 0.15917821069425364,
+   "within5": 0.4914070964540846,
    "flippedFraction": 0,
-   "meanScale": 1.0007891503092698
+   "meanScale": 1.000872796090233
   }
  },
  {
@@ -96,16 +96,16 @@
   "method": "Cylindrical, fitted axis (arc length)",
   "stats": {
    "triangles": 36,
-   "skinArea": 0.008996704754159703,
+   "skinArea": 0.00899670755598685,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.021419322901706082,
-   "sizeErrP95": 0.05546720932665683,
-   "sizeErrMax": 0.057701890971727954,
-   "anisoMean": 0.04053817119290764,
-   "anisoP95": 0.10902386852172419,
-   "within5": 0.6860345592646507,
+   "sizeErrMean": 0.021064276105534113,
+   "sizeErrP95": 0.0545712427138586,
+   "sizeErrMax": 0.0558704880611125,
+   "anisoMean": 0.03981445864133324,
+   "anisoP95": 0.10758648956034156,
+   "within5": 0.6860347864956334,
    "flippedFraction": 0,
-   "meanScale": 1.000554225378651
+   "meanScale": 1.0005244562962756
   }
  },
  {
@@ -113,17 +113,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
-   "triangles": 117,
-   "skinArea": 0.010822047715098957,
+   "triangles": 116,
+   "skinArea": 0.013368453369260812,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 2.240215422013192,
-   "sizeErrP95": 11.745378497526168,
-   "sizeErrMax": 29.02126398164966,
-   "anisoMean": 2.2402154194618134,
-   "anisoP95": 11.745390413379457,
-   "within5": 0.26075463281503886,
-   "flippedFraction": 0.1600212498934656,
-   "meanScale": 2.1201077519108584
+   "sizeErrMean": 3.3423467750324733,
+   "sizeErrP95": 17.402113319216667,
+   "sizeErrMax": 35.64585424742787,
+   "anisoMean": 3.342346711773903,
+   "anisoP95": 17.402098058268553,
+   "within5": 0.1921269666053679,
+   "flippedFraction": 0.18204636364620674,
+   "meanScale": 2.67117337138517
   }
  },
  {
@@ -132,35 +132,35 @@
   "method": "Exponential map",
   "stats": {
    "triangles": 33,
-   "skinArea": 0.007850195099705208,
+   "skinArea": 0.00791279964553498,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.010428347792802757,
-   "sizeErrP95": 0.03472187453920528,
-   "sizeErrMax": 0.07473531370559283,
-   "anisoMean": 0.012177083952334723,
-   "anisoP95": 0.03523076573773909,
-   "within5": 0.9820460641712969,
+   "sizeErrMean": 0.014129963823471202,
+   "sizeErrP95": 0.06933027953812831,
+   "sizeErrMax": 0.07300431778065053,
+   "anisoMean": 0.01670692525202207,
+   "anisoP95": 0.07064246214283143,
+   "within5": 0.9225671453498466,
    "flippedFraction": 0,
-   "meanScale": 1.0027721047195768
+   "meanScale": 1.005621432827225
   },
-  "ms": 3.292085000000043
+  "ms": 2.333511000000044
  },
  {
   "body": "male",
   "scenario": "Forearm outer, 3×4 in",
   "method": "Cylindrical, joint axis (θ·r)",
   "stats": {
-   "triangles": 36,
-   "skinArea": 0.008330026144161786,
+   "triangles": 38,
+   "skinArea": 0.008732998286442657,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.04833893445340394,
-   "sizeErrP95": 0.10711601349739297,
-   "sizeErrMax": 0.11990493541736447,
-   "anisoMean": 0.06709420294542337,
-   "anisoP95": 0.16841491981748136,
-   "within5": 0.4296027246764326,
+   "sizeErrMean": 0.0497828712331116,
+   "sizeErrP95": 0.10231954737365978,
+   "sizeErrMax": 0.12366641667374556,
+   "anisoMean": 0.06932794980569036,
+   "anisoP95": 0.1372661152705974,
+   "within5": 0.4649254093667747,
    "flippedFraction": 0,
-   "meanScale": 1.006113515365682
+   "meanScale": 1.003508774806906
   }
  },
  {
@@ -168,17 +168,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "Cylindrical, fitted axis (θ·r)",
   "stats": {
-   "triangles": 34,
-   "skinArea": 0.008139311443945725,
+   "triangles": 33,
+   "skinArea": 0.00789268537762346,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.04809555908353442,
-   "sizeErrP95": 0.10331369243319877,
-   "sizeErrMax": 0.24431850989380854,
-   "anisoMean": 0.06733688180563181,
-   "anisoP95": 0.13613705021318734,
-   "within5": 0.43453969915755936,
+   "sizeErrMean": 0.042067803698213654,
+   "sizeErrP95": 0.08474896984386349,
+   "sizeErrMax": 0.1079194353147852,
+   "anisoMean": 0.0616177431899033,
+   "anisoP95": 0.12371178925668969,
+   "within5": 0.48278193497962035,
    "flippedFraction": 0,
-   "meanScale": 1.0035549222156104
+   "meanScale": 1.0000715677748246
   }
  },
  {
@@ -186,17 +186,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "Cylindrical, joint axis (arc length)",
   "stats": {
-   "triangles": 34,
-   "skinArea": 0.008003904528110558,
+   "triangles": 36,
+   "skinArea": 0.008347358364611491,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.024581766391261455,
-   "sizeErrP95": 0.06757156070491144,
-   "sizeErrMax": 0.09534964917324618,
-   "anisoMean": 0.048282767574699036,
-   "anisoP95": 0.13718916379807822,
-   "within5": 0.5828628668012339,
+   "sizeErrMean": 0.02471738866741677,
+   "sizeErrP95": 0.06861266160110091,
+   "sizeErrMax": 0.09808897158655028,
+   "anisoMean": 0.04830039478021225,
+   "anisoP95": 0.13921334725960777,
+   "within5": 0.5810654752228405,
    "flippedFraction": 0,
-   "meanScale": 1.0010729170571704
+   "meanScale": 1.001250401353924
   }
  },
  {
@@ -205,16 +205,16 @@
   "method": "Cylindrical, fitted axis (arc length)",
   "stats": {
    "triangles": 33,
-   "skinArea": 0.007892683554289397,
+   "skinArea": 0.00789268537762346,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.02737118162686266,
-   "sizeErrP95": 0.06805198893343833,
-   "sizeErrMax": 0.0761085482559627,
-   "anisoMean": 0.05280102920506538,
-   "anisoP95": 0.1295213058647926,
-   "within5": 0.44811804779373166,
+   "sizeErrMean": 0.027114672362941242,
+   "sizeErrP95": 0.07017035303053676,
+   "sizeErrMax": 0.07800220793113044,
+   "anisoMean": 0.05221328081321572,
+   "anisoP95": 0.13478101689249833,
+   "within5": 0.5472346662041316,
    "flippedFraction": 0,
-   "meanScale": 1.0008744988101212
+   "meanScale": 1.000903335372864
   }
  },
  {
@@ -223,18 +223,18 @@
   "method": "Cylindrical (θ·r) + close band",
   "stats": {
    "triangles": 40,
-   "skinArea": 0.009330404499107348,
-   "designArea": 0.008774869369983673,
-   "sizeErrMean": 0.05008714578300092,
-   "sizeErrP95": 0.10811528176910334,
-   "sizeErrMax": 0.11867384860726271,
-   "anisoMean": 0.05540837297329392,
-   "anisoP95": 0.11112679442679418,
-   "within5": 0.4531299010631607,
+   "skinArea": 0.009330404955212465,
+   "designArea": 0.008774888309597969,
+   "sizeErrMean": 0.0500617867335788,
+   "sizeErrP95": 0.10800077789963214,
+   "sizeErrMax": 0.11866191028223527,
+   "anisoMean": 0.055347994644226406,
+   "anisoP95": 0.11105337297163564,
+   "within5": 0.4531296793005554,
    "flippedFraction": 0,
-   "meanScale": 1.0003636596054932
+   "meanScale": 1.0003575666052287
   },
-  "seamMismatchMm": -2.026250505795088e-13
+  "seamMismatchMm": -2.4854223216854963e-13
  },
  {
   "body": "male",
@@ -242,36 +242,36 @@
   "method": "Cylindrical (arc length) + close band",
   "stats": {
    "triangles": 40,
-   "skinArea": 0.009330404499107348,
-   "designArea": 0.008774869369983673,
-   "sizeErrMean": 0.04147201250339449,
-   "sizeErrP95": 0.06395106391878014,
-   "sizeErrMax": 0.06870787593865102,
-   "anisoMean": 0.04622423773816238,
-   "anisoP95": 0.06909867246114532,
-   "within5": 0.62877051299732,
+   "skinArea": 0.009330404955212465,
+   "designArea": 0.008774888309597969,
+   "sizeErrMean": 0.041492270219017226,
+   "sizeErrP95": 0.06439668299717083,
+   "sizeErrMax": 0.0685513779368867,
+   "anisoMean": 0.04626604188816184,
+   "anisoP95": 0.06971459297047766,
+   "within5": 0.6287705596521698,
    "flippedFraction": 0,
-   "meanScale": 0.9985482313627603
+   "meanScale": 0.9985471698817887
   },
-  "seamMismatchMm": -2.56505475253745e-13
+  "seamMismatchMm": -2.3670795582156163e-13
  },
  {
   "body": "male",
   "scenario": "Forearm full band, 3 in, fixed width",
   "method": "Cylindrical (arc length), no closing",
-  "seamMismatchMm": 17.717135985359608,
+  "seamMismatchMm": 17.715091519046243,
   "stats": {
    "triangles": 71,
-   "skinArea": 0.01672429301878316,
-   "designArea": 0.017549738739967347,
-   "sizeErrMean": 0.07233100092061992,
-   "sizeErrP95": 0.13612535764618272,
-   "sizeErrMax": 0.14857149720572438,
-   "anisoMean": 0.15004558256492867,
-   "anisoP95": 0.2839855187525244,
-   "within5": 0.24986668629499198,
+   "skinArea": 0.016724302768102106,
+   "designArea": 0.017549776619195937,
+   "sizeErrMean": 0.07205391057544314,
+   "sizeErrP95": 0.1337999116524351,
+   "sizeErrMax": 0.14887686178870219,
+   "anisoMean": 0.1493120531956574,
+   "anisoP95": 0.27938182461673233,
+   "within5": 0.24986665904062078,
    "flippedFraction": 0,
-   "meanScale": 1.0035804684847405
+   "meanScale": 1.0035812737608993
   },
   "note": "positive = gap at the seam where the forearm is wider than the design; negative = overlap"
  },
@@ -283,20 +283,76 @@
  },
  {
   "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 66,
+   "skinArea": 0.009310757912982612,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.015944758158186828,
+   "sizeErrP95": 0.035497503755796744,
+   "sizeErrMax": 0.1104874348333007,
+   "anisoMean": 0.018028932894041755,
+   "anisoP95": 0.04153088550532047,
+   "within5": 0.9734978288333538,
+   "flippedFraction": 0,
+   "meanScale": 1.0062806331286205
+  },
+  "ms": 1.7245550000000094
+ },
+ {
+  "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 196,
+   "skinArea": 0.014992403599444138,
+   "designArea": 0.0096774,
+   "sizeErrMean": 1.2115581578022094,
+   "sizeErrP95": 4.027889180362616,
+   "sizeErrMax": 33.61072937279106,
+   "anisoMean": 1.2115577328186296,
+   "anisoP95": 4.0278729341763375,
+   "within5": 0.2445886121798656,
+   "flippedFraction": 0.31367636200463644,
+   "meanScale": 1.6057791125764562
+  }
+ },
+ {
+  "body": "male",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Cylindrical (forearm only)",
+  "stats": {
+   "triangles": 28,
+   "skinArea": 0.004374306125753608,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.03225819627492761,
+   "sizeErrP95": 0.10805486958660293,
+   "sizeErrMax": 0.13844307667783173,
+   "anisoMean": 0.055062611373740716,
+   "anisoP95": 0.16548410592053653,
+   "within5": 0.633532682175228,
+   "flippedFraction": 0,
+   "meanScale": 0.9996041014348392
+  },
+  "note": "covers only the forearm half: the upper-arm skin is outside its region"
+ },
+ {
+  "body": "male",
   "scenario": "Left shoulder blade, 4×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
    "triangles": 100,
-   "skinArea": 0.010659760359905962,
+   "skinArea": 0.010658571923167657,
    "designArea": 0.01032256,
-   "sizeErrMean": 0.03543604351684277,
-   "sizeErrP95": 0.12076085111371881,
-   "sizeErrMax": 0.3867121961031348,
-   "anisoMean": 0.035436128137161634,
-   "anisoP95": 0.12076129724138385,
-   "within5": 0.7524495042697766,
+   "sizeErrMean": 0.03534140175032393,
+   "sizeErrP95": 0.12014848997992122,
+   "sizeErrMax": 0.38850331812216643,
+   "anisoMean": 0.03534138496902502,
+   "anisoP95": 0.12015187212610234,
+   "within5": 0.7524283843378249,
    "flippedFraction": 0,
-   "meanScale": 1.0177179833783192
+   "meanScale": 1.017670705392986
   }
  },
  {
@@ -305,63 +361,63 @@
   "method": "Exponential map",
   "stats": {
    "triangles": 55,
-   "skinArea": 0.010409268798078773,
+   "skinArea": 0.010409272555215638,
    "designArea": 0.01032256,
-   "sizeErrMean": 0.00745756170478544,
-   "sizeErrP95": 0.02355854399032431,
-   "sizeErrMax": 0.0332748499116402,
-   "anisoMean": 0.009460764288460977,
-   "anisoP95": 0.028341215804688513,
-   "within5": 1,
+   "sizeErrMean": 0.007462088388942441,
+   "sizeErrP95": 0.023996332034822876,
+   "sizeErrMax": 0.0405529350826449,
+   "anisoMean": 0.009459886104521146,
+   "anisoP95": 0.029581933774161184,
+   "within5": 0.9777390086134382,
    "flippedFraction": 0,
-   "meanScale": 1.0002398783629112
+   "meanScale": 1.0000967570148755
   },
-  "ms": 2.6382409999999936
+  "ms": 1.6579639999999927
  },
  {
   "body": "male",
   "scenario": "Exp map speed, 2×2 in",
   "method": "Exponential map",
-  "ms": 1.4930590000000166,
+  "ms": 0.7461500000000569,
   "note": "42 vertices"
  },
  {
   "body": "male",
   "scenario": "Exp map speed, 4×4 in",
   "method": "Exponential map",
-  "ms": 0.8376269999999977,
+  "ms": 1.144804000000022,
   "note": "84 vertices"
  },
  {
   "body": "male",
   "scenario": "Exp map speed, 8×8 in",
   "method": "Exponential map",
-  "ms": 1.8610909999999876,
+  "ms": 2.0596630000000005,
   "note": "243 vertices"
  },
  {
   "body": "male",
   "scenario": "Exp map speed, 12×12 in",
   "method": "Exponential map",
-  "ms": 18.84593499999994,
-  "note": "6159 vertices"
+  "ms": 16.169953000000078,
+  "note": "5436 vertices"
  },
  {
   "body": "female",
   "scenario": "Forearm front, 3×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
-   "triangles": 159,
-   "skinArea": 0.012012466060129085,
+   "triangles": 164,
+   "skinArea": 0.011958324233021863,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 3.1586993658336056,
-   "sizeErrP95": 7.876310624658981,
-   "sizeErrMax": 147.38060417747386,
-   "anisoMean": 3.1587001023656334,
-   "anisoP95": 7.876315053091448,
-   "within5": 0.276709426607885,
-   "flippedFraction": 0.33461080744823035,
-   "meanScale": 2.579349672890975
+   "sizeErrMean": 2.7980819613301877,
+   "sizeErrP95": 6.587255324927198,
+   "sizeErrMax": 134.4423505081579,
+   "anisoMean": 2.79808220622863,
+   "anisoP95": 6.5872591027214344,
+   "within5": 0.28909454588115613,
+   "flippedFraction": 0.32732608758929005,
+   "meanScale": 2.3990409935652646
   }
  },
  {
@@ -369,19 +425,19 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Exponential map",
   "stats": {
-   "triangles": 47,
-   "skinArea": 0.00790755217515208,
+   "triangles": 45,
+   "skinArea": 0.007587739803259804,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.016002533445841516,
-   "sizeErrP95": 0.05301300453654534,
-   "sizeErrMax": 0.1032661267025019,
-   "anisoMean": 0.017228690928436766,
-   "anisoP95": 0.0532619299905539,
-   "within5": 0.9317878846425407,
+   "sizeErrMean": 0.014851359261627057,
+   "sizeErrP95": 0.047898026540509564,
+   "sizeErrMax": 0.09283704963340256,
+   "anisoMean": 0.01626784102447655,
+   "anisoP95": 0.04809372464971284,
+   "within5": 0.9586200659168695,
    "flippedFraction": 0,
-   "meanScale": 1.0073342350817316
+   "meanScale": 1.0067269556804288
   },
-  "ms": 9.760658000000149
+  "ms": 4.509102999999868
  },
  {
   "body": "female",
@@ -389,16 +445,16 @@
   "method": "Cylindrical, joint axis (θ·r)",
   "stats": {
    "triangles": 45,
-   "skinArea": 0.007801076178565877,
+   "skinArea": 0.007801070318874291,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.06935373471599181,
-   "sizeErrP95": 0.1374973280368228,
-   "sizeErrMax": 0.1385559687812501,
-   "anisoMean": 0.09773550347127545,
-   "anisoP95": 0.17649524356031177,
-   "within5": 0.20206083307647885,
+   "sizeErrMean": 0.06944416799850231,
+   "sizeErrP95": 0.13823987828731155,
+   "sizeErrMax": 0.13930474817358085,
+   "anisoMean": 0.09782421364599998,
+   "anisoP95": 0.17757195120819125,
+   "within5": 0.2020610354630726,
    "flippedFraction": 0,
-   "meanScale": 0.9778212360120254
+   "meanScale": 0.977767924695332
   }
  },
  {
@@ -407,16 +463,16 @@
   "method": "Cylindrical, fitted axis (θ·r)",
   "stats": {
    "triangles": 47,
-   "skinArea": 0.007944120738848766,
+   "skinArea": 0.007944115255274893,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.0626874168930861,
-   "sizeErrP95": 0.13140691901486923,
-   "sizeErrMax": 0.14000820009655746,
-   "anisoMean": 0.08532748802215062,
-   "anisoP95": 0.16453773850908093,
-   "within5": 0.27835541545183395,
+   "sizeErrMean": 0.06283021213880445,
+   "sizeErrP95": 0.13251597846845176,
+   "sizeErrMax": 0.1408574312018538,
+   "anisoMean": 0.08533244449073443,
+   "anisoP95": 0.16652008869489876,
+   "within5": 0.26320304345554285,
    "flippedFraction": 0,
-   "meanScale": 0.9883513665155237
+   "meanScale": 0.9882885288844497
   }
  },
  {
@@ -424,17 +480,17 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Cylindrical, joint axis (arc length)",
   "stats": {
-   "triangles": 48,
-   "skinArea": 0.008152808656755488,
+   "triangles": 46,
+   "skinArea": 0.007922580840111285,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.02891106455466703,
-   "sizeErrP95": 0.07735015874464124,
-   "sizeErrMax": 0.07903476169688783,
-   "anisoMean": 0.0572590467529898,
-   "anisoP95": 0.16381109015624662,
-   "within5": 0.5718190104309071,
+   "sizeErrMean": 0.027967825762014217,
+   "sizeErrP95": 0.07718638161230451,
+   "sizeErrMax": 0.07767237784271286,
+   "anisoMean": 0.055213836123121675,
+   "anisoP95": 0.16238031357873894,
+   "within5": 0.5884354479124909,
    "flippedFraction": 0,
-   "meanScale": 1.000340872024383
+   "meanScale": 1.0003637711303823
   }
  },
  {
@@ -442,17 +498,17 @@
   "scenario": "Forearm front, 3×4 in",
   "method": "Cylindrical, fitted axis (arc length)",
   "stats": {
-   "triangles": 50,
-   "skinArea": 0.008512135821175852,
+   "triangles": 47,
+   "skinArea": 0.008045874942532946,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.024815648865102225,
-   "sizeErrP95": 0.05274851503529954,
-   "sizeErrMax": 0.06925723247817084,
-   "anisoMean": 0.04785554956733715,
-   "anisoP95": 0.10644569591793474,
-   "within5": 0.6075651859701532,
+   "sizeErrMean": 0.02361087900914292,
+   "sizeErrP95": 0.06489430662707774,
+   "sizeErrMax": 0.06920346001962763,
+   "anisoMean": 0.045152162183472774,
+   "anisoP95": 0.13282241548648832,
+   "within5": 0.6294838071491857,
    "flippedFraction": 0,
-   "meanScale": 1.0002281630223926
+   "meanScale": 1.0002344166372046
   }
  },
  {
@@ -460,17 +516,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
-   "triangles": 155,
-   "skinArea": 0.01144463670663312,
+   "triangles": 170,
+   "skinArea": 0.013950902209719571,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 7.642527847370591,
-   "sizeErrP95": 24.509355973025812,
-   "sizeErrMax": 207.56599602014754,
-   "anisoMean": 7.642530716236116,
-   "anisoP95": 24.50935554698479,
-   "within5": 0.21761526282266466,
-   "flippedFraction": 0.29666816827535125,
-   "meanScale": 4.821263897533924
+   "sizeErrMean": 13.250818271356849,
+   "sizeErrP95": 36.937784243171876,
+   "sizeErrMax": 1287.3177319269826,
+   "anisoMean": 13.250821760414143,
+   "anisoP95": 36.93778397906153,
+   "within5": 0.15766611431342267,
+   "flippedFraction": 0.34408098709025,
+   "meanScale": 7.625409137615192
   }
  },
  {
@@ -478,19 +534,19 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "Exponential map",
   "stats": {
-   "triangles": 47,
-   "skinArea": 0.007699754569420903,
+   "triangles": 48,
+   "skinArea": 0.00783154063192241,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.010098079368028584,
-   "sizeErrP95": 0.030380848168294117,
-   "sizeErrMax": 0.04144897142126269,
-   "anisoMean": 0.011752382033489425,
-   "anisoP95": 0.029899777121955795,
-   "within5": 1,
+   "sizeErrMean": 0.01510608580728683,
+   "sizeErrP95": 0.08197391608708626,
+   "sizeErrMax": 0.09686115140377205,
+   "anisoMean": 0.01668206018758605,
+   "anisoP95": 0.0820577438224721,
+   "within5": 0.9435732695906556,
    "flippedFraction": 0,
-   "meanScale": 1.0032794436654826
+   "meanScale": 1.0060895079446903
   },
-  "ms": 1.2543409999998403
+  "ms": 1.9396330000001853
  },
  {
   "body": "female",
@@ -498,16 +554,16 @@
   "method": "Cylindrical, joint axis (θ·r)",
   "stats": {
    "triangles": 46,
-   "skinArea": 0.007549092067400364,
+   "skinArea": 0.00754909301608455,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.08076833904652786,
-   "sizeErrP95": 0.32977345775210165,
-   "sizeErrMax": 0.33944636074617085,
-   "anisoMean": 0.0982174398407113,
-   "anisoP95": 0.36122458679276015,
-   "within5": 0.36794533860061385,
+   "sizeErrMean": 0.08093795662851565,
+   "sizeErrP95": 0.33118871399445005,
+   "sizeErrMax": 0.3409342707486236,
+   "anisoMean": 0.09843938272398017,
+   "anisoP95": 0.362829375942171,
+   "within5": 0.36794508721953156,
    "flippedFraction": 0,
-   "meanScale": 1.0103229833314227
+   "meanScale": 1.0104899013378088
   }
  },
  {
@@ -515,17 +571,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "Cylindrical, fitted axis (θ·r)",
   "stats": {
-   "triangles": 47,
-   "skinArea": 0.007655124538247672,
+   "triangles": 46,
+   "skinArea": 0.0074597252560730356,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.06641850194265482,
-   "sizeErrP95": 0.27445054784323464,
-   "sizeErrMax": 0.32092359618651645,
-   "anisoMean": 0.08552407825811774,
-   "anisoP95": 0.2778312302690211,
-   "within5": 0.4374783700676289,
+   "sizeErrMean": 0.061122627658057975,
+   "sizeErrP95": 0.2845455260644729,
+   "sizeErrMax": 0.3240064283956994,
+   "anisoMean": 0.08058153455988817,
+   "anisoP95": 0.2896497745639546,
+   "within5": 0.44893758330168565,
    "flippedFraction": 0,
-   "meanScale": 1.0108595229924926
+   "meanScale": 1.0077298222602462
   }
  },
  {
@@ -533,17 +589,17 @@
   "scenario": "Forearm outer, 3×4 in",
   "method": "Cylindrical, joint axis (arc length)",
   "stats": {
-   "triangles": 47,
-   "skinArea": 0.007643637975249128,
+   "triangles": 46,
+   "skinArea": 0.007439799797072102,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.028648914802710153,
-   "sizeErrP95": 0.07732276102420488,
-   "sizeErrMax": 0.09218830621156471,
-   "anisoMean": 0.0565968785352496,
-   "anisoP95": 0.15748634811359508,
-   "within5": 0.5401909466368443,
+   "sizeErrMean": 0.026882344697889766,
+   "sizeErrP95": 0.07338386513940809,
+   "sizeErrMax": 0.07770280285908604,
+   "anisoMean": 0.05285554585458323,
+   "anisoP95": 0.15276415966861578,
+   "within5": 0.5725458581370703,
    "flippedFraction": 0,
-   "meanScale": 1.0013324812972664
+   "meanScale": 1.0012083691770821
   }
  },
  {
@@ -552,16 +608,16 @@
   "method": "Cylindrical, fitted axis (arc length)",
   "stats": {
    "triangles": 47,
-   "skinArea": 0.007606698125440366,
+   "skinArea": 0.00760670315593195,
    "designArea": 0.0077419199999999985,
-   "sizeErrMean": 0.029969335746343324,
-   "sizeErrP95": 0.06491201660427348,
-   "sizeErrMax": 0.07482802419732049,
-   "anisoMean": 0.058779526327843015,
-   "anisoP95": 0.13800711757359396,
-   "within5": 0.4692994996099431,
+   "sizeErrMean": 0.029824018157214006,
+   "sizeErrP95": 0.06591390747555204,
+   "sizeErrMax": 0.07481135722752952,
+   "anisoMean": 0.058480441968442924,
+   "anisoP95": 0.13980447404749619,
+   "within5": 0.46929909209002235,
    "flippedFraction": 0,
-   "meanScale": 1.000862395601957
+   "meanScale": 1.000699190187758
   }
  },
  {
@@ -570,18 +626,18 @@
   "method": "Cylindrical (θ·r) + close band",
   "stats": {
    "triangles": 43,
-   "skinArea": 0.007206812781820937,
-   "designArea": 0.0074847736746668815,
-   "sizeErrMean": 0.04812846991926731,
-   "sizeErrP95": 0.12150128318049025,
-   "sizeErrMax": 0.12888634009351208,
-   "anisoMean": 0.05188879377607333,
-   "anisoP95": 0.12130926291019772,
-   "within5": 0.5257709189306867,
+   "skinArea": 0.007206813142611041,
+   "designArea": 0.007485232835412026,
+   "sizeErrMean": 0.04810112048593321,
+   "sizeErrP95": 0.12140089681478838,
+   "sizeErrMax": 0.1287567569016035,
+   "anisoMean": 0.05184299826958741,
+   "anisoP95": 0.1211937328717092,
+   "within5": 0.5257710456993125,
    "flippedFraction": 0,
-   "meanScale": 1.00525859446203
+   "meanScale": 1.0052226164201652
   },
-  "seamMismatchMm": -2.1058801719381072e-13
+  "seamMismatchMm": -1.6984868676077526e-13
  },
  {
   "body": "female",
@@ -589,36 +645,36 @@
   "method": "Cylindrical (arc length) + close band",
   "stats": {
    "triangles": 43,
-   "skinArea": 0.007206812781820937,
-   "designArea": 0.0074847736746668815,
-   "sizeErrMean": 0.041915405664445564,
-   "sizeErrP95": 0.06343843980551922,
-   "sizeErrMax": 0.06616182723797781,
-   "anisoMean": 0.04601946688828987,
-   "anisoP95": 0.06974333254066534,
-   "within5": 0.6084288838420503,
+   "skinArea": 0.007206813142611041,
+   "designArea": 0.007485232835412026,
+   "sizeErrMean": 0.04185523227584848,
+   "sizeErrP95": 0.06322895208769741,
+   "sizeErrMax": 0.0658154955860859,
+   "anisoMean": 0.04588402334548479,
+   "anisoP95": 0.06936797778574477,
+   "within5": 0.6117101729516058,
    "flippedFraction": 0,
-   "meanScale": 1.0025204243536268
+   "meanScale": 1.002495945086662
   },
-  "seamMismatchMm": -2.088400206033791e-13
+  "seamMismatchMm": -1.9704825295292314e-13
  },
  {
   "body": "female",
   "scenario": "Forearm full band, 3 in, fixed width",
   "method": "Cylindrical (arc length), no closing",
-  "seamMismatchMm": -18.12796256481205,
+  "seamMismatchMm": -18.149998874521387,
   "stats": {
    "triangles": 97,
-   "skinArea": 0.015741996320165787,
-   "designArea": 0.014969547349333763,
-   "sizeErrMean": 0.07128817661972837,
-   "sizeErrP95": 0.13108240001338234,
-   "sizeErrMax": 0.1477648337675319,
-   "anisoMean": 0.1479658045484011,
-   "anisoP95": 0.28029567232000097,
-   "within5": 0.22814544679868096,
+   "skinArea": 0.015741998836918396,
+   "designArea": 0.014970465670824051,
+   "sizeErrMean": 0.0709746015117729,
+   "sizeErrP95": 0.13148856008730747,
+   "sizeErrMax": 0.14422819960743882,
+   "anisoMean": 0.14743550327920268,
+   "anisoP95": 0.27905638786561515,
+   "within5": 0.22814551030819455,
    "flippedFraction": 0,
-   "meanScale": 1.003009398490463
+   "meanScale": 1.0029371442038162
   },
   "note": "positive = gap at the seam where the forearm is wider than the design; negative = overlap"
  },
@@ -630,20 +686,76 @@
  },
  {
   "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Exponential map",
+  "stats": {
+   "triangles": 104,
+   "skinArea": 0.010247241428947866,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.04428423158579396,
+   "sizeErrP95": 0.14436752156598942,
+   "sizeErrMax": 0.21237391232507852,
+   "anisoMean": 0.04513563228530827,
+   "anisoP95": 0.14522061328381652,
+   "within5": 0.6993499414599094,
+   "flippedFraction": 0,
+   "meanScale": 1.0206405689146005
+  },
+  "ms": 0.9426630000000387
+ },
+ {
+  "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "three.js DecalGeometry",
+  "stats": {
+   "triangles": 299,
+   "skinArea": 0.01736362753727595,
+   "designArea": 0.0096774,
+   "sizeErrMean": 1.7274342390944155,
+   "sizeErrP95": 4.424129284418242,
+   "sizeErrMax": 40.3467896811874,
+   "anisoMean": 1.7274344259495547,
+   "anisoP95": 4.424129112444282,
+   "within5": 0.20005045720356962,
+   "flippedFraction": 0.44927607086581317,
+   "meanScale": 1.8637171522090883
+  }
+ },
+ {
+  "body": "female",
+  "scenario": "Across the inner elbow, 3×5 in",
+  "method": "Cylindrical (forearm only)",
+  "stats": {
+   "triangles": 44,
+   "skinArea": 0.0049532922466055075,
+   "designArea": 0.0096774,
+   "sizeErrMean": 0.0317603502906609,
+   "sizeErrP95": 0.14779927636646173,
+   "sizeErrMax": 0.26937734616106146,
+   "anisoMean": 0.05174465590454204,
+   "anisoP95": 0.2318885471713299,
+   "within5": 0.7192761951065496,
+   "flippedFraction": 0,
+   "meanScale": 0.9982693242746415
+  },
+  "note": "covers only the forearm half: the upper-arm skin is outside its region"
+ },
+ {
+  "body": "female",
   "scenario": "Left shoulder blade, 4×4 in",
   "method": "three.js DecalGeometry",
   "stats": {
    "triangles": 120,
-   "skinArea": 0.010660153563471374,
+   "skinArea": 0.01066120430175629,
    "designArea": 0.01032256,
-   "sizeErrMean": 0.03488246392742097,
-   "sizeErrP95": 0.19303249491235341,
-   "sizeErrMax": 0.2151667792349521,
-   "anisoMean": 0.03488242943371376,
-   "anisoP95": 0.1930321735970666,
-   "within5": 0.8170583219883102,
+   "sizeErrMean": 0.03501102352617703,
+   "sizeErrP95": 0.19408092330925109,
+   "sizeErrMax": 0.21630167016614732,
+   "anisoMean": 0.03501101194864098,
+   "anisoP95": 0.19408024244923316,
+   "within5": 0.8168993500409514,
    "flippedFraction": 0,
-   "meanScale": 1.0174412500362635
+   "meanScale": 1.0175055160504924
   }
  },
  {
@@ -652,45 +764,45 @@
   "method": "Exponential map",
   "stats": {
    "triangles": 65,
-   "skinArea": 0.010092738749209278,
+   "skinArea": 0.010092734822836416,
    "designArea": 0.01032256,
-   "sizeErrMean": 0.006480198521512923,
-   "sizeErrP95": 0.019968524078710526,
-   "sizeErrMax": 0.0276880846642642,
-   "anisoMean": 0.0076702706173663445,
-   "anisoP95": 0.025066540571558882,
+   "sizeErrMean": 0.006557557257475173,
+   "sizeErrP95": 0.02030646921029511,
+   "sizeErrMax": 0.029383967166188185,
+   "anisoMean": 0.007743502460630471,
+   "anisoP95": 0.025843089905352334,
    "within5": 1,
    "flippedFraction": 0,
-   "meanScale": 0.9978364654917448
+   "meanScale": 0.9978460194001421
   },
-  "ms": 0.9159930000000713
+  "ms": 0.7322120000001178
  },
  {
   "body": "female",
   "scenario": "Exp map speed, 2×2 in",
   "method": "Exponential map",
-  "ms": 0.3731960000000072,
+  "ms": 0.2636139999999614,
   "note": "48 vertices"
  },
  {
   "body": "female",
   "scenario": "Exp map speed, 4×4 in",
   "method": "Exponential map",
-  "ms": 0.5709620000000086,
+  "ms": 0.3169359999999415,
   "note": "97 vertices"
  },
  {
   "body": "female",
   "scenario": "Exp map speed, 8×8 in",
   "method": "Exponential map",
-  "ms": 1.6240319999999429,
+  "ms": 0.848555000000033,
   "note": "307 vertices"
  },
  {
   "body": "female",
   "scenario": "Exp map speed, 12×12 in",
   "method": "Exponential map",
-  "ms": 19.426639000000023,
-  "note": "6248 vertices"
+  "ms": 23.378809000000047,
+  "note": "6315 vertices"
  }
 ]
