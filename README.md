@@ -19,7 +19,10 @@ npm run dev          # http://localhost:5173
    **Body shape**: belly, bust, bust lift, hips, buttocks, thighs, thigh gap, upper arms and calves.
    Skin tone follows the dermatology skin-colour scale (very light to very dark) with a cool/warm
    undertone, or pick any custom colour. Shapes come from the Anny body model, so a taller client
-   really is taller, not just scaled.
+   really is taller, not just scaled. The body has real eyes and eyebrows, natural colour
+   variation (lips, areolae, nails, lighter palms and soles, redder knees and elbows) and soft
+   shading in creases that follows the body shape
+   ([before and after](docs/phase1/realism-before-after.png)).
 2. **Import design**: PNG, JPG, WEBP, SVG, PDF or Illustrator `.ai` (or drop a file anywhere on the
    page). Multi-page PDFs and multi-artboard `.ai` files let you pick a page. The background is
    removed automatically, with a before/after preview and controls; **Download PNG** saves the
@@ -97,6 +100,7 @@ Docs: [plan](docs/plan.md) · [decisions](docs/decisions.md) · [licenses](docs/
 ## Credits
 
 Body models generated with [Anny](https://github.com/naver/anny) by NAVER LABS Europe (Apache 2.0),
-built on [MakeHuman](https://static.makehumancommunity.org/) assets (CC0). Exponential map decals
+built on [MakeHuman](https://static.makehumancommunity.org/) assets (CC0); regional skin masks from
+MPFB2 (CC0), shipped with Anny. Exponential map decals
 after Schmidt, Grimm and Wyvill, "Interactive Decal Compositing with Discrete Exponential Maps",
 SIGGRAPH 2006.

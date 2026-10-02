@@ -20,8 +20,9 @@ import {
 import { buildEnvironmentScene, DIRECT_LIGHTS } from './environment';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { fetchRawBody, hitFromIntersection, prepareBody, raycastBody, type LoadedBody, type RawBody, type SurfaceHit } from '../body/loadBody';
-import { LIMBS, type BodyId } from '../body/skeleton';
+import { fetchRawBody, hitFromIntersection, prepareBody, raycastBody, setVertexAO, type LoadedBody, type RawBody, type SurfaceHit } from '../body/loadBody';
+import { computeAO } from '../body/aoClient';
+import { jointPos, LIMBS, type BodyId } from '../body/skeleton';
 import { buildLimbFrame, cylCoords, ringCircumference, type CylPlacement, type LimbFrame } from '../projection/cylindrical';
 import { buildDecal, decalSamples } from '../projection/decal';
 import { designUV, INCH, type DesignTransform } from '../projection/design';
@@ -46,6 +47,8 @@ Object.assign(BufferGeometry.prototype, { computeBoundsTree, disposeBoundsTree }
 Object.assign(Mesh.prototype, { raycast: acceleratedRaycast });
 
 const rawCache = new Map<BodyId, Promise<RawBody>>();
+/** Last ambient occlusion per body: reused while the worker computes the new shape's. */
+const aoCache = new Map<BodyId, Float32Array>();
 let framedOnce = false;
 function loadRaw(id: BodyId) {
   if (!rawCache.has(id)) rawCache.set(id, fetchRawBody(id, import.meta.env.BASE_URL));
@@ -84,11 +87,37 @@ export function Scene() {
   const body = useMemo(() => {
     if (!raw || raw.id !== bodyId) return null;
     const t0 = performance.now();
-    const b = prepareBody(raw, { heightM: clientHeight, weight: bodyWeight, muscle: bodyMuscle, local: bodyLocal });
+    const b = prepareBody(raw, { heightM: clientHeight, weight: bodyWeight, muscle: bodyMuscle, local: bodyLocal }, { ao: aoCache.get(raw.id) });
     (b.geometry as BvhGeometry).computeBoundsTree();
     useApp.getState().setTiming('bodyPrepareMs', performance.now() - t0);
+    if (b.aoMs) useApp.getState().setTiming('aoMs', b.aoMs);
     return b;
   }, [raw, bodyId, clientHeight, bodyWeight, bodyMuscle, bodyLocal]);
+
+  // Ambient occlusion for the new shape, off the main thread (the body shows the previous shape's
+  // meanwhile; same mesh, so it is close).
+  useEffect(() => {
+    if (!body) return;
+    if (!aoCache.has(body.id)) {
+      // First load computed it synchronously in prepareBody.
+      const a = body.geometry.getAttribute('ao');
+      const welded = new Float32Array(body.surface.vertexCount);
+      for (let i = 0; i < body.surface.vid.length; i++) welded[body.surface.vid[i]] = a.array[i] as number;
+      aoCache.set(body.id, welded);
+      return;
+    }
+    let alive = true;
+    const t0 = performance.now();
+    computeAO(body.surface).then((ao) => {
+      if (!alive || !ao) return;
+      aoCache.set(body.id, ao);
+      setVertexAO(body.geometry, body.surface, ao);
+      useApp.getState().setTiming('aoMs', performance.now() - t0);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [body]);
 
   // Every reshape (height, build, muscle) builds a new geometry: free the old one's BVH and GPU
   // buffers, or dragging a body slider leaks GPU memory (fatal on iPads).
@@ -303,7 +332,14 @@ function TestHooks({ body }: { body: LoadedBody | null }) {
       controls?.update();
     };
     t.orbitEnabled = () => controls?.enabled ?? null;
+    t.joint = (name: string) => (body ? jointPos(body.skeleton, name) : null);
     t.gpuMemory = () => ({ ...gl.info.memory });
+    t.aoStats = () => {
+      const a = body?.geometry.getAttribute('ao')?.array as Float32Array | undefined;
+      if (!a) return null;
+      const s = [...a].sort((x, y) => x - y);
+      return { min: s[0], p05: s[Math.floor(s.length * 0.05)], p50: s[Math.floor(s.length / 2)], max: s[s.length - 1], ms: body?.aoMs };
+    };
     t.bodyHeight = () => {
       const bb = body?.geometry.boundingBox;
       return bb ? bb.max.y - bb.min.y : NaN;
@@ -388,6 +424,8 @@ function Body({ body }: { body: LoadedBody }) {
     try {
       const t0 = performance.now();
       material.color = new Color(shared.skinTone);
+      uniforms.uRegions.value = body.regions ?? uniforms.uRegions.value;
+      uniforms.uAO.value = shared.skinDetail ? 1 : 0.6;
       uniforms.uDetail.value = shared.skinDetail ? 1 : 0;
       uniforms.uSSS.value = shared.skinDetail ? 1 : 0;
       uniforms.uSelected.value = shared.selected;

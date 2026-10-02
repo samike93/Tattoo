@@ -9,11 +9,13 @@ For each body this writes:
                           Attributes: POSITION, NORMAL, TEXCOORD_0,
                           _VID  (original welded vertex index, so the app can rebuild
                                  the connected surface across UV seams),
-                          _BONE (index of the bone with the largest skin weight).
+                          _BONE (index of the bone with the largest skin weight),
+                          _EYE, _REGION (eyes and regional skin colour, see skin_regions.py).
                           18 morph targets: the corners of Anny's height x weight x muscle
                           anchor grid (2 x 3 x 3). Anny's mesh is exactly trilinear between
                           these corners, so the app reproduces any body shape in that range
                           (checked: < 1e-9 mm error) without shipping Anny itself.
+    <name>.regions.png    regional skin colour and eyebrows in UV space (skin_regions.py).
     <name>.skeleton.json  bone labels, parents and joint (bone head) positions in the
                           same frame, plus joint positions for every morph corner. Used for
                           the cylindrical-wrap limb axes.
@@ -34,6 +36,8 @@ import trimesh
 import yaml
 
 import anny
+
+import skin_regions
 
 DROP_PARTS = {"eye_back.L", "eye_back.R", "eye_cavity.L", "eye_cavity.R", "mouth_cavity", "tongue"}
 
@@ -106,7 +110,7 @@ def write_glb(path, attributes, indices, morph_targets=(), target_names=()):
         return len(accessors) - 1
 
     for name, arr in attributes.items():
-        type_ = {1: "SCALAR", 2: "VEC2", 3: "VEC3"}[1 if arr.ndim == 1 else arr.shape[1]]
+        type_ = {1: "SCALAR", 2: "VEC2", 3: "VEC3", 4: "VEC4"}[1 if arr.ndim == 1 else arr.shape[1]]
         attr_map[name] = add(arr.astype(np.float32), 34962, 5126, type_, minmax=(name == "POSITION"))
     idx = add(indices.astype(np.uint32).reshape(-1), 34963, 5125, "SCALAR")
     def add_raw(arr):
@@ -247,8 +251,9 @@ def export(model, name, phenotype, out_dir):
 
     faces = model.faces.cpu().numpy()
     fuv = model.face_texture_coordinate_indices.cpu().numpy()
-    keep = ~np.isin(face_segments(model), list(DROP_PARTS))
-    faces, fuv = faces[keep], fuv[keep]
+    seg = face_segments(model)
+    keep = ~np.isin(seg, list(DROP_PARTS))
+    faces, fuv, seg = faces[keep], fuv[keep], seg[keep]
 
     # Smooth normals on the welded mesh, so UV seams do not show as shading creases.
     welded = trimesh.Trimesh(verts, faces, process=False)
@@ -264,6 +269,17 @@ def export(model, name, phenotype, out_dir):
     bone_w = model.vertex_bone_weights.cpu().numpy()
     bone_i = model.vertex_bone_indices.cpu().numpy()
     dominant = bone_i[np.arange(len(bone_i)), bone_w.argmax(1)]
+
+    # Eyes, regional skin colour and eyebrows (see skin_regions.py).
+    eyes = skin_regions.eye_centres(verts, faces, seg)
+    eye_att = skin_regions.eye_attribute(verts, faces, seg, eyes)
+    head_mask = np.zeros(len(verts))
+    head_mask[np.unique(faces[seg == "head"].reshape(-1))] = 1.0
+    region_att = skin_regions.region_attribute(list(model.bone_labels), heads, verts, normals, dominant, head_mask)
+    tris = inverse.reshape(-1, 3)
+    info = skin_regions.regions_texture(out_dir / f"{name}.regions.png", uv, verts[vid], tris, seg == "head", eyes,
+                                        female=phenotype["gender"] > 0.5)
+    print(f"  eyes r = {eyes['L'][1] * 1000:.1f} mm, brow texels {info['brow_texels']}")
 
     corners, targets, names = [], [], []
     for h in SHAPE_GRID["height"]:
@@ -298,6 +314,8 @@ def export(model, name, phenotype, out_dir):
             "TEXCOORD_0": uv,
             "_VID": vid.astype(np.float32),
             "_BONE": dominant[vid].astype(np.float32),
+            "_EYE": eye_att[vid],
+            "_REGION": region_att[vid],
         },
         inverse.reshape(-1, 3),
         targets,

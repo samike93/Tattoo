@@ -166,3 +166,22 @@ or handle grab is one step; other changes less than 0.6 s apart (a slider being 
 Switching body clears the history because placements are pinned to that body's mesh. The size
 label sits centred under the box's lowest point rather than along its axis, so it never overlaps
 a rotated design, and it shows the size actually applied (band mode uses the ring length).
+
+### 2026-10-02: A more realistic body without new assets or licences
+
+The body looked like a mannequin: empty eye sockets, one flat colour, no contact shading. Fixed
+with data Anny already ships (all CC0 or computed) rather than a new model:
+- Eyes: Anny's eyeball fronts were shaded as skin. The exporter stores each eye vertex's direction
+  from the fitted eyeball centre; the shader draws sclera, a fibred iris with a limbal ring, the
+  pupil, a wet (low roughness) cornea, and shading under the upper lid.
+- Colour variation: MPFB2's UV masks (lips, areolae, nails, ears, eyelids, face, genitals) packed
+  into one RGB texture per body; palms and soles (lighter, strongest on dark skin), knees, elbows
+  and knuckles from the skeleton and normals. How dark the skin is comes from its colour, so custom
+  colours work too.
+- Eyebrows are painted into the same texture by the exporter from 3-D positions relative to each
+  eye (shape, taper, hair direction), thinner and more arched on the female body.
+- Ambient occlusion per vertex (disc-based, after Bunnell), recomputed for every body shape in a
+  worker (~0.1 s); the previous shape's AO shows meanwhile. Screen-space AO was rejected: a
+  full-screen pass costs too much on iPads for a mostly static scene.
+Not done: hair (would need hair cards or a scalp texture), smoother silhouettes (Anny has no
+finer mesh; subdividing would quadruple the morph data).

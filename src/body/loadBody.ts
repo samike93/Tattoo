@@ -1,8 +1,9 @@
-import { BufferAttribute, BufferGeometry, Mesh, Raycaster, Triangle, Vector3, type Intersection } from 'three';
+import { BufferAttribute, BufferGeometry, LinearFilter, LinearMipmapLinearFilter, Mesh, NoColorSpace, Raycaster, Texture, TextureLoader, Triangle, Vector3, type Intersection } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { buildSurface, weldedNormals, type BodySurface } from './surface';
 import { scaleSkeleton, type BodyId, type Skeleton } from './skeleton';
 import { applyShape, type ShapeParams } from './shape';
+import { vertexAO } from './ao';
 import { normalize, type Vec3 } from '../projection/vec';
 
 export interface LoadedBody {
@@ -16,15 +17,20 @@ export interface LoadedBody {
   scale: number;
   /** Anny height phenotype used (0..1), when the GLB carries shape morphs. */
   heightPhenotype?: number;
+  /** Regional skin colour and eyebrows (UV space); null if the file is missing. */
+  regions: Texture | null;
+  /** Time spent computing ambient occlusion, ms. */
+  aoMs: number;
 }
 
 export interface RawBody {
   id: BodyId;
   geometry: BufferGeometry;
   skeleton: Skeleton;
+  regions: Texture | null;
 }
 
-export async function parseBodyGlb(id: BodyId, glb: ArrayBuffer, skeleton: Skeleton): Promise<RawBody> {
+export async function parseBodyGlb(id: BodyId, glb: ArrayBuffer, skeleton: Skeleton, regions: Texture | null = null): Promise<RawBody> {
   const gltf = await new GLTFLoader().parseAsync(glb, '');
   let geometry: BufferGeometry | undefined;
   gltf.scene.traverse((o) => {
@@ -34,14 +40,18 @@ export async function parseBodyGlb(id: BodyId, glb: ArrayBuffer, skeleton: Skele
   for (const name of ['position', 'normal', 'uv', '_vid', '_bone']) {
     if (!geometry.getAttribute(name)) throw new Error(`${id}.glb is missing the ${name} attribute; re-run tools/export_bodies.py`);
   }
-  return { id, geometry, skeleton };
+  // Older exports have no eye / region data: plain skin everywhere.
+  const count = geometry.getAttribute('position').count;
+  if (!geometry.getAttribute('_eye')) geometry.setAttribute('_eye', new BufferAttribute(new Float32Array(3 * count), 3));
+  if (!geometry.getAttribute('_region')) geometry.setAttribute('_region', new BufferAttribute(new Float32Array(4 * count), 4));
+  return { id, geometry, skeleton, regions };
 }
 
 export async function fetchRawBody(id: BodyId, baseUrl: string): Promise<RawBody> {
   // VITE_MODELS_AS_TEXT=1 builds load base64 copies (models/<id>.glb.txt) for hosts that refuse
   // to serve .glb files; scripts/strict-host.mjs writes them.
   const asText = import.meta.env.VITE_MODELS_AS_TEXT === '1';
-  const [glb, sk] = await Promise.all([
+  const [glb, sk, regions] = await Promise.all([
     fetch(`${baseUrl}models/${id}.glb${asText ? '.txt' : ''}`).then(async (r) => {
       if (!r.ok) throw new Error(`Could not load ${id}.glb (HTTP ${r.status})`);
       if (!asText) return r.arrayBuffer();
@@ -54,15 +64,31 @@ export async function fetchRawBody(id: BodyId, baseUrl: string): Promise<RawBody
       if (!r.ok) throw new Error(`Could not load ${id}.skeleton.json (HTTP ${r.status})`);
       return r.json() as Promise<Skeleton>;
     }),
+    loadRegions(`${baseUrl}models/${id}.regions.png`),
   ]);
-  return parseBodyGlb(id, glb, sk);
+  return parseBodyGlb(id, glb, sk, regions);
+}
+
+/** The region texture is optional: without it the body is one even skin colour. */
+async function loadRegions(url: string): Promise<Texture | null> {
+  try {
+    const tex = await new TextureLoader().loadAsync(url);
+    tex.flipY = false; // glTF UV convention, like the GLB
+    tex.colorSpace = NoColorSpace; // data (masks), not colour
+    tex.minFilter = LinearMipmapLinearFilter;
+    tex.magFilter = LinearFilter;
+    tex.needsUpdate = true;
+    return tex;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Shape the raw body for the client (height, weight, muscle) and build the welded surface.
  * With shape morphs (current GLBs) the shape is exact Anny; older GLBs fall back to uniform scaling.
  */
-export function prepareBody(raw: RawBody, shape: Partial<ShapeParams> = {}): LoadedBody {
+export function prepareBody(raw: RawBody, shape: Partial<ShapeParams> = {}, opts: { ao?: Float32Array } = {}): LoadedBody {
   const nativeHeight = raw.skeleton.height_m;
   const geometry = raw.geometry.clone();
   const morphs = raw.geometry.morphAttributes.position ?? [];
@@ -100,13 +126,33 @@ export function prepareBody(raw: RawBody, shape: Partial<ShapeParams> = {}): Loa
   const split = new Float32Array(3 * surface.vid.length);
   for (let i = 0; i < surface.vid.length; i++) split.set(surface.normals.subarray(3 * surface.vid[i], 3 * surface.vid[i] + 3), 3 * i);
   geometry.setAttribute('normal', new BufferAttribute(split, 3));
+  // Ambient occlusion (creases, armpits, under the bust, between the legs). Callers that reshape
+  // interactively pass the previous shape's AO (same mesh) and refine it in a worker (aoClient.ts).
+  const t0 = performance.now();
+  const reuse = opts.ao && opts.ao.length === surface.vertexCount;
+  const aoWelded = reuse ? opts.ao! : vertexAO(surface.positions, surface.normals, surface.triangles, surface.vertexCount);
+  setVertexAO(geometry, surface, aoWelded);
+  const aoMs = reuse ? 0 : performance.now() - t0;
   geometry.computeBoundingBox();
   geometry.computeBoundingSphere();
   // Per-vertex ink attributes, written by the placement code.
   const count = geometry.getAttribute('position').count;
   geometry.setAttribute('inkCoord', new BufferAttribute(new Float32Array(2 * count), 2));
   geometry.setAttribute('inkMask', new BufferAttribute(new Float32Array(count), 1));
-  return { id: raw.id, geometry, surface, skeleton, nativeHeight, scale, heightPhenotype };
+  return { id: raw.id, geometry, surface, skeleton, nativeHeight, scale, heightPhenotype, regions: raw.regions, aoMs };
+}
+
+/** Write welded per-vertex AO into the geometry's split-vertex `ao` attribute. */
+export function setVertexAO(geometry: BufferGeometry, surface: BodySurface, aoWelded: Float32Array) {
+  const n = surface.vid.length;
+  let attr = geometry.getAttribute('ao') as BufferAttribute | undefined;
+  if (!attr || attr.count !== n) {
+    attr = new BufferAttribute(new Float32Array(n), 1);
+    geometry.setAttribute('ao', attr);
+  }
+  const a = attr.array as Float32Array;
+  for (let i = 0; i < n; i++) a[i] = aoWelded[surface.vid[i]];
+  attr.needsUpdate = true;
 }
 
 export interface SurfaceHit {

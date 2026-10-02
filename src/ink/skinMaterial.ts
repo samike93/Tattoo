@@ -55,6 +55,10 @@ export interface SkinUniforms {
   uInkRedness: { value: number };
   uInkSheen: { value: number };
   uInkDarken: { value: number };
+  /** Regional skin colour and eyebrows in UV space (R redness, G pigment, B nails / brow hair). */
+  uRegions: { value: Texture | null };
+  /** Ambient occlusion strength, 0..1 (per-vertex AO from body/ao.ts). */
+  uAO: { value: number };
 }
 
 export type InkLook = 'fresh' | 'healed' | 'aged';
@@ -85,9 +89,16 @@ export function setInkLook(u: SkinUniforms, look: InkLook) {
 const VERT_HEAD = /* glsl */ `
 attribute vec2 inkCoord;
 attribute float inkMask;
+attribute vec3 _eye;
+attribute vec4 _region;
+attribute float ao;
 varying vec2 vInkCoord;
 varying float vInkMask;
 varying vec3 vObjPos;
+varying vec2 vSkinUv;
+varying vec3 vEye;
+varying vec4 vRegion;
+varying float vAO;
 `;
 
 const FRAG_HEAD = /* glsl */ `
@@ -112,6 +123,12 @@ uniform vec4 uTableInfo;    // tMin, tMax, nT, nTheta
 varying vec2 vInkCoord;
 varying float vInkMask;
 varying vec3 vObjPos;
+varying vec2 vSkinUv;
+varying vec3 vEye;
+varying vec4 vRegion;
+varying float vAO;
+uniform sampler2D uRegions;
+uniform float uAO;
 
 const float PI_ = 3.14159265358979;
 float wrapPi(float a) { return a - 2.0 * PI_ * floor((a + PI_) / (2.0 * PI_)); }
@@ -198,7 +215,7 @@ if (uDetail > 0.0) {
   float fade = 1.0 - smoothstep(0.45, 1.1, footprint);
   // Slopes: pores ~35 micron deep, bumps ~60 micron.
   vec3 g = (0.035e-3 * PORE_FREQ * fade) * n1.yzw + (0.06e-3 * BUMP_FREQ) * n2.yzw;
-  vec3 gv = (viewMatrix * vec4(g, 0.0)).xyz * uDetail;
+  vec3 gv = (viewMatrix * vec4(g, 0.0)).xyz * uDetail * (1.0 - isEye) * (1.0 - nail);
   normal = normalize(normal - (gv - dot(gv, normal) * normal));
 }
 `;
@@ -206,6 +223,10 @@ if (uDetail > 0.0) {
 const FRAG_ROUGH = /* glsl */ `
 // Fresh ink is shiny (ointment, plasma); healed ink takes on the skin's own sheen.
 roughnessFactor = mix(roughnessFactor, roughnessFactor * 0.55, inkCoverage * uInkSheen);
+roughnessFactor = mix(roughnessFactor, 0.3, nail);
+roughnessFactor = mix(roughnessFactor, 0.75, brow);
+roughnessFactor = mix(roughnessFactor, roughnessFactor * 0.8, reg.r * (1.0 - smoothstep(0.0, 0.5, vRegion.z - 0.5)));
+roughnessFactor = mix(roughnessFactor, 0.06, isEye);
 if (uDetail > 0.0) {
   // Centimetre-scale variation in oiliness and tone, as real skin has.
   float v = skinNoised(vObjPos * 45.0 + 3.0).x;
@@ -213,8 +234,54 @@ if (uDetail > 0.0) {
 }
 `;
 
+// Natural colour variation (MPFB2 CC0 masks + mesh-derived regions, see tools/skin_regions.py), eyes
+// and eyebrows. How dark the skin is comes from its colour, so custom colours work too.
+const FRAG_REGIONS = /* glsl */ `
+vec3 reg = texture2D(uRegions, vSkinUv).rgb;
+float skinLum = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+float skinDark = 1.0 - smoothstep(0.03, 0.4, skinLum);
+float isEye = step(0.5, vEye.z);
+float nail = reg.b * (1.0 - step(0.5, vRegion.z));
+float brow = reg.b * step(0.5, vRegion.z);
+{
+  vec3 c = diffuseColor.rgb;
+  // Lips, ears, eyelids, a touch over the face: more blood showing; on dark skin lips are darker.
+  c *= mix(vec3(1.0), mix(vec3(0.96, 0.7, 0.7), vec3(0.78, 0.62, 0.65), skinDark), reg.r);
+  // Areolae, genitals: more pigment.
+  c *= mix(vec3(1.0), mix(vec3(0.74, 0.58, 0.54), vec3(0.62, 0.52, 0.5), skinDark), reg.g);
+  // Knees, elbows, knuckles: redder on light skin, darker on dark skin.
+  c *= mix(vec3(1.0), mix(vec3(1.0, 0.86, 0.84), vec3(0.8, 0.74, 0.72), skinDark), 0.7 * vRegion.y);
+  // Palms and soles carry little melanin: lighter and pinker, most visible on darker skin.
+  vec3 palm = max(c, vec3(0.42, 0.26, 0.21)) * vec3(1.0, 0.95, 0.94);
+  c = mix(c, palm, vRegion.x * (0.3 + 0.55 * skinDark));
+  // Nails: the nail bed seen through a translucent plate, a little lighter and pinker than the
+  // skin around it (much lighter on dark skin, where the bed carries less melanin).
+  vec3 nailCol = min(c * mix(vec3(1.18, 1.08, 1.06), vec3(1.6, 1.4, 1.36), skinDark), vec3(0.55, 0.42, 0.4));
+  c = mix(c, nailCol, 0.85 * nail);
+  // Eyebrows: brown-black hair, a little lighter with very light skin.
+  vec3 hair = mix(vec3(0.07, 0.045, 0.03), vec3(0.022, 0.015, 0.012), smoothstep(0.0, 0.4, skinDark + 0.25));
+  c = mix(c, hair, 0.94 * brow);
+  diffuseColor.rgb = c;
+}
+if (isEye > 0.5) {
+  // Eyeball front: sclera, iris with radial fibres and a dark limbal ring, pupil. The upper lid and
+  // lashes shade the top of the eye, which keeps it from looking like a stare.
+  float rr = length(vEye.xy);
+  float ang = atan(vEye.y, vEye.x);
+  float fibres = 0.5 + 0.5 * sin(ang * 46.0 + 3.0 * sin(ang * 7.0)) * sin(ang * 23.0 + rr * 40.0);
+  vec3 iris = mix(vec3(0.03, 0.016, 0.008), vec3(0.11, 0.055, 0.022), smoothstep(0.13, 0.3, rr) * (0.55 + 0.45 * fibres));
+  iris *= 1.0 - 0.65 * smoothstep(0.27, 0.35, rr);
+  vec3 sclera = mix(vec3(0.7, 0.64, 0.6), vec3(0.6, 0.47, 0.44), smoothstep(0.5, 0.95, rr));
+  float inIris = 1.0 - smoothstep(0.335, 0.352, rr);
+  float inPupil = 1.0 - smoothstep(0.115, 0.13, rr);
+  vec3 e = mix(mix(sclera, iris, inIris), vec3(0.006), inPupil);
+  e *= mix(1.0, 0.45, smoothstep(0.08, 0.4, vEye.y));
+  diffuseColor.rgb = e;
+}
+`;
+
 const FRAG_TONE = /* glsl */ `
-if (uDetail > 0.0) {
+if (uDetail > 0.0 && isEye < 0.5) {
   float t = skinNoised(vObjPos * 28.0 + 7.0).x - 0.5;
   diffuseColor.rgb *= 1.0 + uDetail * vec3(0.05, 0.035, 0.03) * t;
 }
@@ -227,6 +294,18 @@ const SSS_DIFFUSE = /* glsl */ `
 	float sssNL = dot(geometryNormal, directLight.direction);
 	vec3 sssIrradiance = directLight.color * clamp((vec3(sssNL) + sssWrap) / (1.0 + sssWrap), 0.0, 1.0) / (1.0 + 0.5 * sssWrap);
 	reflectedLight.directDiffuse += sssIrradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );
+`;
+
+// Ambient occlusion: creases, armpits and between the legs get less of the soft surrounding light,
+// and a little less direct light (the shadow map is too coarse for small creases).
+const FRAG_AO = /* glsl */ `
+{
+  float occ = mix(1.0, vAO, uAO);
+  reflectedLight.indirectDiffuse *= occ;
+  reflectedLight.indirectSpecular *= occ * occ;
+  reflectedLight.directDiffuse *= mix(1.0, occ, 0.45);
+  reflectedLight.directSpecular *= mix(1.0, occ, 0.6);
+}
 `;
 
 const FRAG_INK = /* glsl */ `
@@ -328,6 +407,8 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     uInkRedness: { value: 0 },
     uInkSheen: { value: 0 },
     uInkDarken: { value: 0 },
+    uRegions: { value: blank },
+    uAO: { value: 1 },
   };
   const material = new MeshPhysicalMaterial({
     color: new Color(color),
@@ -342,18 +423,19 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     Object.assign(shader.uniforms, uniforms);
     shader.vertexShader = VERT_HEAD + shader.vertexShader.replace(
       '#include <begin_vertex>',
-      '#include <begin_vertex>\n vObjPos = position; vInkCoord = inkCoord; vInkMask = inkMask;',
+      '#include <begin_vertex>\n vObjPos = position; vInkCoord = inkCoord; vInkMask = inkMask; vSkinUv = uv; vEye = _eye; vRegion = _region; vAO = ao;',
     );
     const diffuseLine = 'reflectedLight.directDiffuse += irradiance * BRDF_Lambert( material.diffuseContribution ) * ( 1.0 - F );';
     const lights = ShaderChunk.lights_physical_pars_fragment;
     if (!lights.includes(diffuseLine)) console.warn('three.js lighting chunk changed: skin SSS approximation disabled');
     shader.fragmentShader = (FRAG_HEAD + FRAG_NOISE + shader.fragmentShader)
       .replace('#include <lights_physical_pars_fragment>', lights.replace(diffuseLine, SSS_DIFFUSE))
-      .replace('#include <map_fragment>', '#include <map_fragment>\n' + FRAG_TONE + FRAG_INK)
+      .replace('#include <map_fragment>', '#include <map_fragment>\n' + FRAG_REGIONS + FRAG_TONE + FRAG_INK)
+      .replace('#include <aomap_fragment>', '#include <aomap_fragment>\n' + FRAG_AO)
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + FRAG_ROUGH)
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_PORES);
   };
-  material.customProgramCacheKey = () => 'tattoo-skin-v3';
+  material.customProgramCacheKey = () => 'tattoo-skin-v4';
   return { material, uniforms };
 }
 
