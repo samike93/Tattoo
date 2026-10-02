@@ -35,7 +35,24 @@ export interface Placement {
   bary?: [number, number, number];
 }
 
+/** A photo of the client, kept on this device only (never in share links). */
+export interface ClientPhoto {
+  canvas: HTMLCanvasElement;
+  name: string;
+}
+
 export interface AppState {
+  /** What the design is shown on: the 3D body or a photo of the client. */
+  mode: 'body' | 'photo';
+  photo: ClientPhoto | null;
+  /** Design centre on the photo, photo pixels. Null = middle of the photo. */
+  photoAt: [number, number] | null;
+  /** Measured scale (photo pixels per inch); null = not measured (sizes are estimates). */
+  photoPxPerInch: number | null;
+  /** How much the design bends around a limb in the photo, 0 (flat) .. 1. */
+  photoCurve: number;
+  /** Setting the scale: tap two points on the photo, then enter the real distance. */
+  photoCalibrating: boolean;
   bodyId: BodyId;
   /** Client height in meters. */
   clientHeight: number;
@@ -115,6 +132,12 @@ export interface AppState {
 export const DEFAULT_HEIGHTS: Record<BodyId, number> = { male: 1.78, female: 1.65 };
 
 export const useApp = create<AppState>((set) => ({
+  mode: 'body',
+  photo: null,
+  photoAt: null,
+  photoPxPerInch: null,
+  photoCurve: 0.3,
+  photoCalibrating: false,
   bodyId: 'male',
   clientHeight: DEFAULT_HEIGHTS.male,
   bodyWeight: 0.5,

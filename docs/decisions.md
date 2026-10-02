@@ -185,3 +185,15 @@ with data Anny already ships (all CC0 or computed) rather than a new model:
   full-screen pass costs too much on iPads for a mostly static scene.
 Not done: hair (would need hair cards or a scalp texture), smoother silhouettes (Anny has no
 finer mesh; subdividing would quadruple the morph data).
+
+### 2026-10-02: Client photo mode instead of third-party human models
+
+Asked for "live human models". Realistic scanned humans (Renderpeople, scan stores) don't allow
+shipping the mesh in a web page, MetaHumans need Unreal and an Epic login to export, and MakeHuman's
+CC0 photo skins could not be downloaded from this environment. The most realistic body is the
+client's own, so photo mode puts the design on a photo of them: a WebGL shader multiplies the ink
+into the photo in sRGB (like a multiply layer, so the photo's light, pores and hair stay on top)
+with the same spread / fade / redness as the 3D ink looks, and bends it round a limb (design width
+as arc length on a cylinder). True size comes from a measured reference (two taps on a ruler in the
+photo); without it sizes are marked as estimates (≈). Photos are decoded upright, capped at
+3072 px, and never uploaded or put in share links.

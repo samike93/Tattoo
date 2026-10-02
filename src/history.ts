@@ -6,7 +6,7 @@ import { useApp, type AppState } from './state';
  * that follow each other quickly (a slider being dragged, typing a size) also merge into one step.
  * Body, skin and view settings are not part of the history.
  */
-const KEYS = ['design', 'placement', 'spot', 'limbId', 'slide', 'around', 'band', 'widthIn', 'heightIn', 'lockAspect', 'rotationDeg', 'mirror'] as const;
+const KEYS = ['design', 'placement', 'spot', 'limbId', 'slide', 'around', 'band', 'widthIn', 'heightIn', 'lockAspect', 'rotationDeg', 'mirror', 'photoAt', 'photoCurve'] as const;
 type Snapshot = Pick<AppState, (typeof KEYS)[number]>;
 
 const MERGE_MS = 600;

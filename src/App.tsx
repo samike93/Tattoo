@@ -8,10 +8,12 @@ import { DesignBox } from './ui/DesignBox';
 import { installPenTracking, isIPad, isTouchDevice } from './ui/input';
 import { hashToState, stateToHash, useApp } from './state';
 import { installHistory, redo, undo } from './history';
+import { PhotoStage } from './photo/PhotoStage';
 
 export function App() {
   const ui = useApp((s) => s.ui);
   const status = useApp((s) => s.status);
+  const mode = useApp((s) => s.mode);
 
   // Share links: state lives in the URL hash, so any link reproduces exactly what you see.
   useEffect(() => {
@@ -47,7 +49,7 @@ export function App() {
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         st.deleteDesign();
-      } else if (e.key === 'Escape') st.set({ selected: false });
+      } else if (e.key === 'Escape') st.set({ selected: false, photoCalibrating: false });
       else if (e.key === 'd' || e.key === 'D') st.set({ debugOpen: !st.debugOpen });
     };
     window.addEventListener('keydown', onKey);
@@ -80,9 +82,10 @@ export function App() {
 
   return (
     <div className={`app ${ui ? '' : 'no-ui'}`}>
-      <main className="stage">
+      <main className={`stage ${mode === 'photo' ? 'photo-mode' : ''}`}>
         <ErrorBoundary>
           <Canvas
+            frameloop={mode === 'photo' ? 'never' : 'always'}
             camera={{ fov: 35, near: 0.02, far: 50, position: [0, 1, 2.6] }}
             dpr={[1, 2]}
             gl={{ antialias: true, preserveDrawingBuffer: true }}
@@ -94,9 +97,10 @@ export function App() {
             </Suspense>
           </Canvas>
         </ErrorBoundary>
-        {status !== 'Ready' && <div className="status">{status}</div>}
-        <DesignBox />
-        {status === 'Ready' && <UndoBar />}
+        {mode === 'photo' && <PhotoStage />}
+        {status !== 'Ready' && mode === 'body' && <div className="status">{status}</div>}
+        {mode === 'body' && <DesignBox />}
+        {(status === 'Ready' || mode === 'photo') && <UndoBar />}
         <DeletedToast />
         <Notice />
       </main>

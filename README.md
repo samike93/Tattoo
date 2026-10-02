@@ -44,7 +44,14 @@ npm run dev          # http://localhost:5173
    view, so a resting palm can't knock the design around. Toggle it in the panel under View.
 6. **Ink look**: Fresh (just done), Healed (default) or Aged 10+ years, to show how fine lines and
    small lettering will hold up. **Studio light** or **Shop light** under View.
-7. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
+7. **Client photo** (switch at the top of the panel): take or choose a photo of the client's skin
+   on the iPad and the design is drawn into it with the same fresh / healed / aged ink. Drag to
+   move, tap to place, pinch or the corner handles to resize, the knob to rotate; **Curve around
+   the limb** bends it round an arm or leg. **Set true size**: put a ruler or tape on the skin in
+   the photo, tap its two ends and type the distance, and the design is shown at its real size.
+   **Save photo mockup** saves the full-resolution photo. The photo never leaves the device
+   ([example](docs/phase1/photo-mode.png)).
+8. **Save images**: 3000 px PNGs of this view, front, back or a close-up. On iPad this opens the
    share sheet.
 
 The **1-inch grid** design is still there for checking accuracy, and **Method (advanced)** at the

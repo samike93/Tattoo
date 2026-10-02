@@ -8,6 +8,7 @@ import { formatSize, INCH } from '../projection/design';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
 import { undo } from '../history';
+import { choosePhoto, exportPhoto } from '../photo/PhotoStage';
 
 /** Body-shape controls (ids match tools/export_bodies.py LOCAL_CONTROLS). Neutral wording on purpose. */
 const SHAPE_CONTROLS: { id: string; label: string; less: string; more: string }[] = [
@@ -49,7 +50,47 @@ export function Panel() {
         {window.self === window.top && <span className="tag">Phase 1</span>}
       </header>
 
-      <Section title="Body">
+      <div className="seg mode-switch" role="radiogroup" aria-label="Show the design on">
+        <button className={s.mode === 'body' ? 'on' : ''} onClick={() => s.set({ mode: 'body' })}>3D body</button>
+        <button className={s.mode === 'photo' ? 'on' : ''} onClick={() => s.set({ mode: 'photo', selected: true })}>Client photo</button>
+      </div>
+
+      {s.mode === 'photo' && (
+        <Section title="Client photo">
+          <div className="seg wrap">
+            <label className="photo-pick">
+              {s.photo ? 'Another photo…' : 'Take or choose photo…'}
+              <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && choosePhoto(e.target.files[0])} />
+            </label>
+            {s.photo && (
+              <button className={s.photoCalibrating ? 'on' : ''} onClick={() => s.set({ photoCalibrating: !s.photoCalibrating })}>
+                {s.photoCalibrating ? 'Cancel scale' : 'Set true size'}
+              </button>
+            )}
+          </div>
+          <p className="hint">
+            {!s.photo
+              ? 'A photo of the client’s arm, back, ribs… taken straight on, in good light. It stays on this device.'
+              : s.photoPxPerInch
+                ? `True size: ${s.photoPxPerInch.toFixed(1)} px per inch, measured on this photo.`
+                : 'Sizes are estimates until you set the scale: put a ruler or tape on the skin in the photo, tap “Set true size”, then tap its ends.'}
+          </p>
+          {s.photo && (
+            <Slider
+              label="Curve around the limb"
+              value={s.photoCurve}
+              min={0}
+              max={1}
+              step={0.05}
+              fmt={(v) => (v < 0.05 ? 'Flat (back, chest)' : v < 0.45 ? 'Gentle (thigh, calf)' : v < 0.75 ? 'Round (forearm)' : 'Very round (wrist)')}
+              onChange={(v) => s.set({ photoCurve: v })}
+            />
+          )}
+          <p className="hint">Drag the design to move it, tap the photo to put it there; two fingers zoom the photo.</p>
+        </Section>
+      )}
+
+      {s.mode === 'body' && <Section title="Body">
         <div className="seg">
           {(['male', 'female'] as BodyId[]).map((id) => (
             <button key={id} className={s.bodyId === id ? 'on' : ''} onClick={() => s.set({ bodyId: id, clientHeight: DEFAULT_HEIGHTS[id], placement: null })}>
@@ -122,7 +163,7 @@ export function Panel() {
           fmt={(v) => (v < -0.25 ? 'Cool (pink)' : v > 0.25 ? 'Warm (golden)' : 'Neutral')}
           onChange={(v) => s.set({ skinUndertone: v, skinTone: skinHex({ melanin: s.skinMelanin, undertone: v }) })}
         />
-      </Section>
+      </Section>}
 
       <Section title="Design">
         <div className="seg wrap">
@@ -142,7 +183,7 @@ export function Panel() {
         {s.design.kind === 'none' && s.deleted && <button onClick={undo}>Undo delete</button>}
       </Section>
 
-      <Section title="Placement">
+      {s.mode === 'body' && <Section title="Placement">
         <p className="using">
           {METHOD_NAMES[s.resolved.method]}
           {s.resolved.limbLabel ? ` on the ${s.resolved.limbLabel.toLowerCase()}` : ''}
@@ -178,19 +219,19 @@ export function Panel() {
             <input type="checkbox" checked={s.band} onChange={(e) => s.set({ band: e.target.checked })} /> Full band (all the way around)
           </label>
         )}
-      </Section>
+      </Section>}
 
 
       <Section title="Size and rotation">
-        <Slider label="Width" value={s.widthIn} min={0.25} max={30} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.resolved.method === 'cylinder' && s.band} />
+        <Slider label="Width" value={s.widthIn} min={0.25} max={30} step={0.25} fmt={(v) => `${v} in`} onChange={setWidth} disabled={s.mode === 'body' && s.resolved.method === 'cylinder' && s.band} />
         <Slider label="Height" value={s.heightIn} min={0.25} max={30} step={0.25} fmt={(v) => `${v} in`} onChange={setHeight} />
-        <Slider label="Rotation" value={s.rotationDeg} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ rotationDeg: v })} disabled={s.resolved.method === 'cylinder' && s.band} />
+        <Slider label="Rotation" value={s.rotationDeg} min={-180} max={180} step={1} fmt={(v) => `${v}°`} onChange={(v) => s.set({ rotationDeg: v })} disabled={s.mode === 'body' && s.resolved.method === 'cylinder' && s.band} />
         <Slider label="Opacity" value={s.opacity} min={0} max={1} step={0.05} fmt={(v) => `${Math.round(v * 100)}%`} onChange={(v) => s.set({ opacity: v })} />
         <div className="checks">
           <label className="check"><input type="checkbox" checked={s.lockAspect} onChange={(e) => s.set({ lockAspect: e.target.checked })} /> Lock aspect</label>
           <label className="check"><input type="checkbox" checked={s.mirror} onChange={(e) => s.set({ mirror: e.target.checked })} /> Mirror</label>
         </div>
-        <p className="size">{formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
+        <p className="size">{s.mode === 'photo' ? (s.photoPxPerInch ? '' : '≈ ') + formatSize(s.widthIn * INCH, s.heightIn * INCH) : formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
         <div className="seg" role="radiogroup" aria-label="Ink look">
           {(['fresh', 'healed', 'aged'] as const).map((l) => (
             <button key={l} className={s.inkLook === l ? 'on' : ''} onClick={() => s.set({ inkLook: l })}>
@@ -207,7 +248,7 @@ export function Panel() {
         </p>
       </Section>
 
-      <Section title="View">
+      {s.mode === 'body' && <Section title="View">
         <div className="seg" role="radiogroup" aria-label="Lighting">
           <button className={s.lighting === 'studio' ? 'on' : ''} onClick={() => s.set({ lighting: 'studio' })}>Studio light</button>
           <button className={s.lighting === 'shop' ? 'on' : ''} onClick={() => s.set({ lighting: 'shop' })}>Shop light</button>
@@ -224,9 +265,9 @@ export function Panel() {
           <label className="check"><input type="checkbox" checked={s.skinDetail} onChange={(e) => s.set({ skinDetail: e.target.checked })} /> Skin detail</label>
           <label className="check"><input type="checkbox" checked={s.wireframe} onChange={(e) => s.set({ wireframe: e.target.checked })} /> Wireframe</label>
         </div>
-      </Section>
+      </Section>}
 
-      <Export />
+      {s.mode === 'body' ? <Export /> : <PhotoExport hasPhoto={!!s.photo} />}
 
       <details className="section advanced">
         <summary>Method (advanced)</summary>
@@ -314,6 +355,44 @@ function Export() {
         ))}
       </div>
       <p className="hint">{note || `High-resolution PNG, ${EXPORT_LONG_SIDE} px on the long side.`}</p>
+    </Section>
+  );
+}
+
+/** Save or share an image file (share sheet on iPad and phones, download elsewhere). */
+async function saveBlob(blob: Blob, name: string): Promise<string> {
+  const file = new File([blob], name, { type: 'image/png' });
+  const nav = navigator as Navigator & { canShare?: (d: { files: File[] }) => boolean };
+  if (nav.canShare?.({ files: [file] }) && matchMedia('(pointer: coarse)').matches) {
+    await navigator.share({ files: [file], title: 'Tattoo preview' });
+    return 'Shared.';
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  return `Saved ${name}.`;
+}
+
+function PhotoExport({ hasPhoto }: { hasPhoto: boolean }) {
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState('');
+  const save = async () => {
+    setBusy(true);
+    setNote('');
+    try {
+      setNote(await saveBlob(await exportPhoto(), `tattoo-mockup-${new Date().toISOString().slice(0, 10)}.png`));
+    } catch (e) {
+      if ((e as Error).name !== 'AbortError') setNote(`Couldn’t save the image: ${(e as Error).message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Section title="Save image">
+      <button onClick={save} disabled={busy || !hasPhoto}>{busy ? 'Saving…' : 'Save photo mockup'}</button>
+      <p className="hint">{note || 'Full resolution of the photo, with the design. Handles are not included.'}</p>
     </Section>
   );
 }

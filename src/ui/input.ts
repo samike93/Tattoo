@@ -89,7 +89,8 @@ export function trackPinch(first: PointerEvent, onActive: (active: boolean) => v
     pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
     const g = geom();
     const s = useApp.getState();
-    start = { d: Math.max(g.d, 1), a: g.a, w: s.appliedSize[0], h: s.appliedSize[1], rot: s.rotationDeg };
+    const [w, h] = s.mode === 'photo' ? [s.widthIn, s.heightIn] : s.appliedSize;
+    start = { d: Math.max(g.d, 1), a: g.a, w, h, rot: s.rotationDeg };
     onActive(true);
   };
   const move = (e: PointerEvent) => {
