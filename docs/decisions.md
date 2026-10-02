@@ -197,3 +197,16 @@ with the same spread / fade / redness as the 3D ink looks, and bends it round a 
 as arc length on a cylinder). True size comes from a measured reference (two taps on a ruler in the
 photo); without it sizes are marked as estimates (≈). Photos are decoded upright, capped at
 3072 px, and never uploaded or put in share links.
+
+### 2026-10-02: Ink ages by colour and body area; healing stage; epidermal veil
+
+From the realism research (reports/Tattoo preview realism and capture.md): azo reds and yellows
+are the light-sensitive pigments and black is the most stable, so fade is scaled per ink colour
+(ink/aging.ts pigmentLoss, mirrored in GLSL). Hands, fingers and feet fade and blur fastest
+(practitioner consensus; Kirby-Desai ranks distal limbs highest), so spread and fade are scaled by
+body area (from the bone under the design in 3D, chosen by the artist in photo mode): hands and
+feet 2.5×, forearm and calf 1.35×, upper arm and thigh 1.15×, torso and head 1×. Illustrative
+multipliers, not measured rates. A "Healing (wk 2–6)" look shows the milky silver-skin stage. A
+small epidermal veil keeps ink from reaching pure black (more on darker skin), and low-amplitude
+grain (~0.7 mm) breaks the vector-perfect look. Blowout is deliberately not part of aging: it is a
+technique failure.

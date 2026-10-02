@@ -42,8 +42,12 @@ npm run dev          # http://localhost:5173
    switches on **Apple Pencil mode** (as in Procreate): the Pencil places, moves and resizes the
    design (touching bare skin brings the design to the tip), and fingers only turn and zoom the
    view, so a resting palm can't knock the design around. Toggle it in the panel under View.
-6. **Ink look**: Fresh (just done), Healed (default) or Aged 10+ years, to show how fine lines and
-   small lettering will hold up. **Studio light** or **Shop light** under View.
+6. **Ink look**: Fresh (just done), Healing (weeks 2–6, the milky "silver skin" stage clients
+   worry about), Healed (default) or Aged 10+ years, to show how fine lines and small lettering will
+   hold up. Aging follows the ink colour (reds, oranges and yellows fade most, black least) and the
+   body area (hands, fingers and feet age about 2.5× faster than the torso); labelled as an
+   illustration, not a promise ([examples](docs/phase1/ink-ages.png)). **Studio light** or **Shop
+   light** under View.
 7. **Client photo** (switch at the top of the panel): take or choose a photo of the client's skin
    on the iPad and the design is drawn into it with the same fresh / healed / aged ink. Drag to
    move, tap to place, pinch or the corner handles to resize, the knob to rotate; **Curve around

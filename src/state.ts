@@ -92,7 +92,11 @@ export interface AppState {
   /** Studio (flattering, default) or shop (overhead fluorescent) lighting. */
   lighting: 'studio' | 'shop';
   /** How the ink is shown: fresh (just done), healed (default), aged (10+ years). */
-  inkLook: 'fresh' | 'healed' | 'aged';
+  inkLook: 'fresh' | 'healing' | 'healed' | 'aged';
+  /** Body area of the design on the 3D body (readout; ages faster on hands and feet). */
+  inkArea: import('./ink/aging').BodyArea;
+  /** Body area shown in the client photo (chosen by the artist). */
+  photoArea: import('./ink/aging').BodyArea;
   debugOpen: boolean;
   ui: boolean;
   /** The design is selected: shows the on-body box with resize, rotate and delete handles. */
@@ -165,6 +169,8 @@ export const useApp = create<AppState>((set) => ({
   wireframe: false,
   skinDetail: true,
   inkLook: 'healed',
+  inkArea: 'distalLimb',
+  photoArea: 'distalLimb',
   lighting: 'studio',
   debugOpen: false,
   ui: true,

@@ -31,6 +31,7 @@ import { cylinderSamples, measureSamples, vertexCoordSamples } from '../projecti
 import { computeExpMapAsync, setExpMapSurface } from '../projection/expmapClient';
 import { chooseMethod, limbAt, type AutoChoice } from '../placement/resolve';
 import { createSkinMaterial, setCylinderUniforms, setDesignUniforms, setInkLook } from '../ink/skinMaterial';
+import { AREA_AGING, areaForBone, type BodyArea } from '../ink/aging';
 import { drawChecker } from '../phase0/checker';
 import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
@@ -475,6 +476,10 @@ function Body({ body }: { body: LoadedBody }) {
           limbLabel = limbAt(body, hit)?.label ?? null;
         }
       }
+      // Body area (hands and feet age fastest): from the limb, or the bone under the design.
+      const area: BodyArea = frame ? areaForBone(frame.limb.id) : hit ? areaForBone(body.skeleton.bones[body.surface.bone[hit.triangle[0]]]?.name ?? '') : 'trunk';
+      setInkLook(uniforms, shared.inkLook, AREA_AGING[area].factor);
+      if (app.inkArea !== area) app.set({ inkArea: area });
       const band = method === 'cylinder' && shared.band;
       if (band && frame && pl) width = ringCircumference(frame, pl.centerT);
       const tf: DesignTransform = { width, height, rotation: (shared.rotationDeg * Math.PI) / 180, mirror: shared.mirror, band };

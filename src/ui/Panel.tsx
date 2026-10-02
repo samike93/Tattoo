@@ -8,6 +8,7 @@ import { formatSize, INCH } from '../projection/design';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
 import { undo } from '../history';
+import { AREA_AGING, type BodyArea } from '../ink/aging';
 import { choosePhoto, exportPhoto } from '../photo/PhotoStage';
 
 /** Body-shape controls (ids match tools/export_bodies.py LOCAL_CONTROLS). Neutral wording on purpose. */
@@ -86,7 +87,15 @@ export function Panel() {
               onChange={(v) => s.set({ photoCurve: v })}
             />
           )}
-          <p className="hint">Drag the design to move it, tap the photo to put it there; two fingers zoom the photo.</p>
+          <label className="row">
+            <span>Body area</span>
+            <select value={s.photoArea} onChange={(e) => s.set({ photoArea: e.target.value as BodyArea })}>
+              {(Object.keys(AREA_AGING) as BodyArea[]).map((a) => (
+                <option key={a} value={a}>{AREA_AGING[a].label[0].toUpperCase() + AREA_AGING[a].label.slice(1)}</option>
+              ))}
+            </select>
+          </label>
+          <p className="hint">Drag the design to move it, tap the photo to put it there; two fingers zoom the photo. Body area sets how fast the aged and healed looks age.</p>
         </Section>
       )}
 
@@ -232,19 +241,27 @@ export function Panel() {
           <label className="check"><input type="checkbox" checked={s.mirror} onChange={(e) => s.set({ mirror: e.target.checked })} /> Mirror</label>
         </div>
         <p className="size">{s.mode === 'photo' ? (s.photoPxPerInch ? '' : '≈ ') + formatSize(s.widthIn * INCH, s.heightIn * INCH) : formatSize(s.appliedSize[0] * INCH, s.appliedSize[1] * INCH)}</p>
-        <div className="seg" role="radiogroup" aria-label="Ink look">
-          {(['fresh', 'healed', 'aged'] as const).map((l) => (
+        <div className="seg wrap" role="radiogroup" aria-label="Ink look">
+          {(['fresh', 'healing', 'healed', 'aged'] as const).map((l) => (
             <button key={l} className={s.inkLook === l ? 'on' : ''} onClick={() => s.set({ inkLook: l })}>
-              {l === 'fresh' ? 'Fresh' : l === 'healed' ? 'Healed' : 'Aged 10+ yrs'}
+              {l === 'fresh' ? 'Fresh' : l === 'healing' ? 'Healing (wk 2–6)' : l === 'healed' ? 'Healed' : 'Aged 10+ yrs'}
             </button>
           ))}
         </div>
         <p className="hint">
           {s.inkLook === 'fresh'
             ? 'Just done: crisp, dark, a little shiny, with redness around the lines.'
-            : s.inkLook === 'healed'
-              ? 'After healing: lines soften by about 0.3 mm and blacks settle to a softer black.'
-              : 'Years later: lines spread about 0.8 mm and blacks go blue-grey. Small details close up first. An estimate, not a promise.'}
+            : s.inkLook === 'healing'
+              ? 'Weeks 2–6: new skin over the ink looks milky and dull (“silver skin”). Normal, and it clears over the following weeks.'
+              : s.inkLook === 'healed'
+                ? 'After healing: lines soften slightly and blacks settle to a softer black, with the skin’s own sheen over the ink.'
+                : 'Years later: lines spread and blacks go blue-grey. Reds, oranges and yellows fade most, black least; small details close up first.'}
+          {s.inkLook !== 'fresh' && (() => {
+            const area = s.mode === 'photo' ? s.photoArea : s.inkArea;
+            const f = AREA_AGING[area].factor;
+            return f > 1.05 ? ` On the ${AREA_AGING[area].label}, ink ages faster: shown at about ${f}× the torso rate.` : '';
+          })()}
+          {s.inkLook !== 'fresh' && ' An illustration, not a promise.'}
         </p>
       </Section>
 

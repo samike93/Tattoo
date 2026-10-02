@@ -13,6 +13,7 @@ import {
   WebGLRenderer,
 } from 'three';
 import { INK_LOOKS, type InkLook } from '../ink/skinMaterial';
+import { PIGMENT_LOSS_GLSL } from '../ink/aging';
 import { curveRadius, type PhotoDesign, type PhotoView } from './geometry';
 
 /**
@@ -36,7 +37,13 @@ uniform bool uHasInk;
 uniform vec2 uAt, uSize;     // design centre and size, photo px
 uniform float uRot, uRadius, uOpacity;
 uniform bool uMirror;
-uniform float uSpreadPx, uFade, uRedness, uDarken, uHaloPx;
+uniform float uSpreadPx, uFade, uRedness, uDarken, uHaloPx, uVeil, uGrain, uAgeArea, uPxPerMm;
+${PIGMENT_LOSS_GLSL}
+float hash2(vec2 p) { p = fract(p * vec2(0.1031, 0.1030)); p += dot(p, p.yx + 33.33); return fract((p.x + p.y) * p.x); }
+float vnoise(vec2 x) {
+  vec2 i = floor(x), f = fract(x), u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash2(i), hash2(i + vec2(1, 0)), u.x), mix(hash2(i + vec2(0, 1)), hash2(i + vec2(1, 1)), u.x), u.y);
+}
 
 vec2 toDesign(vec2 p) {
   vec2 d = p - uAt;
@@ -77,12 +84,20 @@ void main() {
         if (uRedness > 0.0) halo += 0.125 * ink(uv + o * hr).a;
       }
       float a = k.a * uOpacity;
+      // Same ink model as the 3D skin shader (ink/skinMaterial.ts), in the photo's sRGB values.
       float lum = dot(k.rgb, vec3(0.2126, 0.7152, 0.0722));
-      vec3 rgb = mix(k.rgb, vec3(lum), 0.6 * uFade);
-      rgb = mix(rgb, vec3(0.3, 0.36, 0.44), uFade * (1.0 - smoothstep(0.0, 0.25, lum)));
+      float fadeK = clamp(uFade * uAgeArea, 0.0, 0.85);
+      float loss = pigmentLoss(k.rgb);
+      vec3 rgb = mix(k.rgb, vec3(lum), clamp(0.6 * fadeK * loss, 0.0, 1.0));
+      rgb = mix(rgb, vec3(0.3, 0.36, 0.44), fadeK * (1.0 - smoothstep(0.0, 0.25, lum)));
       rgb *= 1.0 - uDarken;
-      a *= 1.0 - 0.25 * uFade;
-      col *= mix(vec3(1.0), rgb, a);
+      a *= clamp(1.0 - 0.3 * fadeK * loss, 0.3, 1.0);
+      if (uGrain > 0.0) a *= 1.0 - uGrain * vnoise(p / (0.7 * uPxPerMm) + 5.0);
+      float skinDark = 1.0 - smoothstep(0.2, 0.7, dot(col, vec3(0.2126, 0.7152, 0.0722)));
+      float veil = clamp(uVeil + 0.04 + 0.05 * skinDark, 0.0, 0.8);
+      vec3 skinBase = col;
+      col *= mix(vec3(1.0), rgb, a * (1.0 - veil));
+      col = mix(col, min(skinBase * 1.06 + 0.03, vec3(1.0)), smoothstep(0.2, 0.4, uVeil) * 0.3 * a);
       col *= mix(vec3(1.0), vec3(1.0, 0.8, 0.78), 0.45 * uRedness * smoothstep(0.02, 0.35, halo) * (1.0 - a));
     }
   }
@@ -97,6 +112,8 @@ export interface PhotoFrame {
   /** Photo pixels per millimetre, for ink spread. */
   pxPerMm: number;
   look: InkLook;
+  /** How much faster ink ages at this body area (ink/aging.ts). */
+  areaFactor: number;
   opacity: number;
   view: PhotoView;
 }
@@ -136,6 +153,10 @@ export class PhotoRenderer {
         uRedness: { value: 0 },
         uDarken: { value: 0 },
         uHaloPx: { value: 0 },
+        uVeil: { value: 0 },
+        uGrain: { value: 0 },
+        uAgeArea: { value: 1 },
+        uPxPerMm: { value: 4 },
       },
     });
     this.scene.add(new Mesh(new PlaneGeometry(2, 2), this.material));
@@ -175,7 +196,12 @@ export class PhotoRenderer {
     u.uRadius.value = Number.isFinite(R) ? R : 0;
     u.uMirror.value = f.design.mirror;
     u.uOpacity.value = f.opacity;
-    u.uSpreadPx.value = look.spreadMm * f.pxPerMm;
+    const area = f.look === 'fresh' ? 1 : f.areaFactor;
+    u.uAgeArea.value = area;
+    u.uSpreadPx.value = look.spreadMm * area * f.pxPerMm;
+    u.uVeil.value = look.veil;
+    u.uGrain.value = look.grain;
+    u.uPxPerMm.value = f.pxPerMm;
     u.uHaloPx.value = 1.5 * f.pxPerMm;
     u.uFade.value = look.fade;
     u.uRedness.value = look.redness;

@@ -7,6 +7,7 @@ import { sizeLabel } from '../ui/DesignBox';
 import { drawChecker } from '../phase0/checker';
 import { designToPhoto, estimatedPxPerInch, fitView, photoToDesign, type PhotoDesign, type PhotoView } from './geometry';
 import { PhotoRenderer } from './photoRenderer';
+import { AREA_AGING } from '../ink/aging';
 import { loadPhoto } from './loadPhoto';
 
 type Corner = 'nw' | 'ne' | 'se' | 'sw';
@@ -58,7 +59,7 @@ export function PhotoStage() {
     useShallow((a: AppState) => ({
       photo: a.photo, photoAt: a.photoAt, photoPxPerInch: a.photoPxPerInch, photoCurve: a.photoCurve, photoCalibrating: a.photoCalibrating,
       widthIn: a.widthIn, heightIn: a.heightIn, rotationDeg: a.rotationDeg, mirror: a.mirror, design: a.design, inkLook: a.inkLook,
-      opacity: a.opacity, selected: a.selected, pencilMode: a.pencilMode,
+      opacity: a.opacity, selected: a.selected, pencilMode: a.pencilMode, photoArea: a.photoArea,
     })),
   );
   const d = photoDesign(s);
@@ -92,7 +93,7 @@ export function PhotoStage() {
     if (!r || !s.photo || !d || !view) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const ppi = s.photoPxPerInch ?? estimatedPxPerInch(s.photo.canvas.width, s.photo.canvas.height);
-    const frame = { photo: s.photo.canvas, ink, design: d, pxPerMm: ppi / 25.4, look: s.inkLook, opacity: s.opacity, view };
+    const frame = { photo: s.photo.canvas, ink, design: d, pxPerMm: ppi / 25.4, look: s.inkLook, areaFactor: AREA_AGING[s.photoArea].factor, opacity: s.opacity, view };
     r.render(frame, Math.round(size[0] * dpr), Math.round(size[1] * dpr), dpr);
     exportFn = async () => {
       const { width: pw, height: ph } = s.photo!.canvas;

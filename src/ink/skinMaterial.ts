@@ -13,6 +13,7 @@ import {
 } from 'three';
 import { TABLE_CHANNELS, type LimbFrame, type CylPlacement } from '../projection/cylindrical';
 import type { DesignTransform } from '../projection/design';
+import { PIGMENT_LOSS_GLSL } from './aging';
 
 /**
  * Skin material with one live ink layer.
@@ -55,35 +56,48 @@ export interface SkinUniforms {
   uInkRedness: { value: number };
   uInkSheen: { value: number };
   uInkDarken: { value: number };
+  /** Epidermis over the ink (0..1): mutes it; strong in the milky healing stage. */
+  uInkVeil: { value: number };
+  /** Needle-depth unevenness of the ink, 0..1. */
+  uInkGrain: { value: number };
+  /** How much faster ink ages at this spot on the body (1 = torso; see ink/aging.ts). */
+  uAgeArea: { value: number };
   /** Regional skin colour and eyebrows in UV space (R redness, G pigment, B nails / brow hair). */
   uRegions: { value: Texture | null };
   /** Ambient occlusion strength, 0..1 (per-vertex AO from body/ao.ts). */
   uAO: { value: number };
 }
 
-export type InkLook = 'fresh' | 'healed' | 'aged';
+export type InkLook = 'fresh' | 'healing' | 'healed' | 'aged';
 
 /**
  * How ink looks at different ages. Ink sits in the dermis under the epidermis; as it heals and ages,
  * pigment particles migrate a little (lines spread), the epidermis over it softens contrast, and
  * black carbon ink scatters light so it reads blue-grey (the Tyndall effect). Fresh ink is crisp,
- * dark, slightly shiny from ointment and plasma, with redness around the lines. Spread is a radius
- * in real millimetres, so small designs blur relatively more, which is the point of showing it.
- * Values are tunable estimates from practitioner sources, not measurements.
+ * dark, slightly shiny from ointment and plasma, with redness around the lines. Weeks 2 to 6 have a
+ * milky "silver skin" stage (new epidermis over the ink) that clients often mistake for fading.
+ * Spread is a radius in real millimetres, so small designs blur relatively more, which is the point
+ * of showing it. Fade is scaled per pigment colour and per body area (ink/aging.ts). Values are
+ * tunable estimates from practitioner sources and the few measurements available, not predictions.
  */
-export const INK_LOOKS: Record<InkLook, { spreadMm: number; fade: number; redness: number; sheen: number; darken: number }> = {
-  fresh: { spreadMm: 0.05, fade: 0, redness: 1, sheen: 1, darken: 0.1 },
-  healed: { spreadMm: 0.15, fade: 0.15, redness: 0, sheen: 0, darken: 0 },
-  aged: { spreadMm: 0.4, fade: 0.3, redness: 0, sheen: 0, darken: 0 },
+export const INK_LOOKS: Record<InkLook, { spreadMm: number; fade: number; redness: number; sheen: number; darken: number; veil: number; grain: number }> = {
+  fresh: { spreadMm: 0.05, fade: 0, redness: 1, sheen: 1, darken: 0.1, veil: 0, grain: 0.03 },
+  healing: { spreadMm: 0.22, fade: 0.08, redness: 0.15, sheen: 0.15, darken: 0, veil: 0.38, grain: 0.06 },
+  healed: { spreadMm: 0.15, fade: 0.15, redness: 0, sheen: 0, darken: 0, veil: 0.06, grain: 0.07 },
+  aged: { spreadMm: 0.4, fade: 0.3, redness: 0, sheen: 0, darken: 0, veil: 0.1, grain: 0.1 },
 };
 
-export function setInkLook(u: SkinUniforms, look: InkLook) {
-  const l = INK_LOOKS[look];
+export function setInkLook(u: SkinUniforms, look: InkLook, areaFactor = 1) {
+  const l = INK_LOOKS[look] ?? INK_LOOKS.healed;
   u.uInkSpread.value = l.spreadMm / 1000;
   u.uInkFade.value = l.fade;
   u.uInkRedness.value = l.redness;
   u.uInkSheen.value = l.sheen;
   u.uInkDarken.value = l.darken;
+  u.uInkVeil.value = l.veil;
+  u.uInkGrain.value = l.grain;
+  // Fresh ink has not aged anywhere yet.
+  u.uAgeArea.value = look === 'fresh' ? 1 : areaFactor;
 }
 
 const VERT_HEAD = /* glsl */ `
@@ -102,7 +116,7 @@ varying float vAO;
 `;
 
 const FRAG_HEAD = /* glsl */ `
-uniform float uInkSpread, uInkFade, uInkRedness, uInkSheen, uInkDarken;
+uniform float uInkSpread, uInkFade, uInkRedness, uInkSheen, uInkDarken, uInkVeil, uInkGrain, uAgeArea;
 uniform float uSSS;
 uniform float uDetail;
 uniform sampler2D uInk;
@@ -131,6 +145,7 @@ uniform sampler2D uRegions;
 uniform float uAO;
 
 const float PI_ = 3.14159265358979;
+${PIGMENT_LOSS_GLSL}
 float wrapPi(float a) { return a - 2.0 * PI_ * floor((a + PI_) / (2.0 * PI_)); }
 float wrapPeriod(float x, float p) { return x - p * floor((x + 0.5 * p) / p); }
 
@@ -332,7 +347,7 @@ float inkCoverage = 0.0;
   // Ink spread, in real millimetres converted to design UV: a 9-tap disc blur of that radius
   // (smooth, unlike leaning on coarse mip levels, which looks blocky), each tap filtered at a
   // third of the radius.
-  vec2 spreadUV = uInkSpread / vec2(uBand ? C : uSize.x, uSize.y);
+  vec2 spreadUV = uInkSpread * uAgeArea / vec2(uBand ? C : uSize.x, uSize.y);
   float footprint = max(length(gx), length(gy)) + 1e-9;
   vec4 ink = vec4(0.0);
   if (inside * on < 0.5) {
@@ -349,13 +364,23 @@ float inkCoverage = 0.0;
     ink = textureGrad(uInk, uv, gx, gy);
   }
   float a = ink.a * uOpacity * inside * on;
-  // Age: blacks lift toward blue-grey (Tyndall), colours desaturate, overall strength fades a little.
+  // Age: blacks lift toward blue-grey (Tyndall), colours desaturate and fade, warm azo pigments
+  // (reds, yellows) and light colours most, black least; faster on hands and feet (uAgeArea).
   float inkLum = dot(ink.rgb, vec3(0.2126, 0.7152, 0.0722));
-  vec3 inkRgb = mix(ink.rgb, vec3(inkLum), 0.6 * uInkFade);
-  inkRgb = mix(inkRgb, vec3(0.085, 0.11, 0.16), uInkFade * (1.0 - smoothstep(0.0, 0.25, inkLum)));
+  float fadeK = clamp(uInkFade * uAgeArea, 0.0, 0.85);
+  float loss = pigmentLoss(sqrt(clamp(ink.rgb, 0.0, 1.0)));
+  vec3 inkRgb = mix(ink.rgb, vec3(inkLum), clamp(0.6 * fadeK * loss, 0.0, 1.0));
+  inkRgb = mix(inkRgb, vec3(0.085, 0.11, 0.16), fadeK * (1.0 - smoothstep(0.0, 0.25, inkLum)));
   inkRgb *= 1.0 - uInkDarken;
-  a *= 1.0 - 0.25 * uInkFade;
-  diffuseColor.rgb *= mix(vec3(1.0), inkRgb, a);
+  a *= clamp(1.0 - 0.3 * fadeK * loss, 0.3, 1.0);
+  // Needle depth varies a little along every stroke: low-amplitude unevenness (~0.7 mm).
+  if (uInkGrain > 0.0) a *= 1.0 - uInkGrain * skinNoised(vObjPos * 1400.0 + 5.0).x;
+  // The epidermis lies over the ink: it never reaches pure black, a little more so on darker skin,
+  // and much more in the milky healing stage.
+  float veil = clamp(uInkVeil + 0.04 + 0.05 * skinDark, 0.0, 0.8);
+  vec3 skinBase = diffuseColor.rgb;
+  diffuseColor.rgb *= mix(vec3(1.0), inkRgb, a * (1.0 - veil));
+  diffuseColor.rgb = mix(diffuseColor.rgb, skinBase * 1.04 + 0.012, smoothstep(0.2, 0.4, uInkVeil) * 0.3 * a);
   inkCoverage = a;
   if (uInkRedness > 0.0 && inside * on > 0.5) {
     // Fresh: irritated skin around the linework (a wide, soft halo outside the ink).
@@ -407,6 +432,9 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
     uInkRedness: { value: 0 },
     uInkSheen: { value: 0 },
     uInkDarken: { value: 0 },
+    uInkVeil: { value: 0.06 },
+    uInkGrain: { value: 0.07 },
+    uAgeArea: { value: 1 },
     uRegions: { value: blank },
     uAO: { value: 1 },
   };
@@ -435,7 +463,7 @@ export function createSkinMaterial(color: string): { material: MeshPhysicalMater
       .replace('#include <roughnessmap_fragment>', '#include <roughnessmap_fragment>\n' + FRAG_ROUGH)
       .replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + FRAG_PORES);
   };
-  material.customProgramCacheKey = () => 'tattoo-skin-v4';
+  material.customProgramCacheKey = () => 'tattoo-skin-v5';
   return { material, uniforms };
 }
 
