@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, type PointerEvent as RPointerEvent } from 'react';
 import { getBox, getProjector, onBox, type BoxGeometry, type HandleId } from '../placement/box';
 import { useApp } from '../state';
+import { beginGesture, endGesture } from '../history';
 
 const CORNERS: HandleId[] = ['nw', 'ne', 'se', 'sw'];
 const EDGES: HandleId[] = ['n', 'e', 's', 'w'];
 const MIN_IN = 0.25;
 const MAX_IN = 30;
 const clampIn = (v: number) => Math.round(Math.min(Math.max(v, MIN_IN), MAX_IN) * 100) / 100;
+const inches = (v: number) => String(Math.round(v * 100) / 100);
+
+/** The live measurement under the box: size in inches and centimetres, and the angle if turned. */
+export function sizeLabel(w: number, h: number, rot: number, band: boolean): string {
+  const turned = !band && rot !== 0 ? `  ·  ${rot > 0 ? '↺' : '↻'} ${Math.abs(rot)}°` : '';
+  return `${inches(w)} × ${inches(h)} in${turned}\n${(w * 2.54).toFixed(1)} × ${(h * 2.54).toFixed(1)} cm`;
+}
 
 type Grab = {
   kind: 'corner' | 'edge-x' | 'edge-y' | 'rotate';
@@ -29,7 +37,7 @@ export function DesignBox() {
   const kind = useApp((s) => s.design.kind);
   const importOpen = useApp((s) => s.importDialog.open);
   const [box, setBoxState] = useState<BoxGeometry | null>(getBox());
-  const els = useRef<Partial<Record<HandleId | 'rotate' | 'trash', HTMLElement | null>>>({});
+  const els = useRef<Partial<Record<HandleId | 'rotate' | 'trash' | 'label', HTMLElement | null>>>({});
   const grab = useRef<Grab | null>(null);
   const show = selected && kind !== 'none' && !!box && !importOpen;
 
@@ -48,6 +56,7 @@ export function DesignBox() {
     const touch = document.documentElement.classList.contains('touch');
     const knobGap = touch ? 50 : 34;
     const binGap = touch ? 48 : 30;
+    const labelGap = touch ? 36 : 30; // to the label's centre
     const minGap = touch ? 52 : 42; // corner + edge hit radii
     const tick = () => {
       const pj = getProjector();
@@ -75,6 +84,16 @@ export function DesignBox() {
           const dx = n.x - c.x, dy = n.y - c.y, L = Math.hypot(dx, dy) || 1;
           place(els.current.rotate, n.x + (dx / L) * knobGap, n.y + (dy / L) * knobGap, n.visible);
         } else place(els.current.rotate, 0, 0, false);
+        // Size label: centred under the lowest visible point of the box, so it never overlaps it.
+        const label = els.current.label;
+        const shown = Object.values(screen).filter((p) => p.visible);
+        if (label && shown.length) {
+          const bottom = Math.max(...shown.map((p) => p.y));
+          place(label, c.x, bottom + labelGap, c.visible);
+          const st = useApp.getState();
+          const text = sizeLabel(st.appliedSize[0], st.appliedSize[1], st.rotationDeg, box.band);
+          if (label.textContent !== text) label.textContent = text;
+        } else place(label, 0, 0, false);
         // Delete: just outside the top-right corner (top edge for bands).
         const t = screen.ne ?? screen.n;
         if (t) {
@@ -116,6 +135,7 @@ export function DesignBox() {
       rot0: s.rotationDeg,
     };
     pj.setOrbitEnabled(false);
+    beginGesture();
   };
 
   const move = (e: RPointerEvent<HTMLElement>) => {
@@ -149,6 +169,7 @@ export function DesignBox() {
     if (!grab.current || e.pointerId !== grab.current.pointerId) return;
     grab.current = null;
     getProjector()?.setOrbitEnabled(true);
+    endGesture();
   };
 
   if (!show || !box) return null;
@@ -185,6 +206,7 @@ export function DesignBox() {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
         </div>
       )}
+      <div ref={(el) => void (els.current.label = el)} className="box-size" aria-live="polite" />
       <button
         ref={(el) => void (els.current.trash = el)}
         className="box-handle trash"

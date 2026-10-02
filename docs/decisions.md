@@ -156,3 +156,13 @@ get larger handles; when the box is small on screen the edge handles hide so the
 corners. Without a Pencil, one finger drags the design and a second finger pinches/twists it.
 Tested in headless Chromium with simulated touch and pen input (`scripts/e2e-input.mjs`), not yet
 on a real iPad.
+
+### 2026-10-02: Undo / redo and the live size label
+
+History covers the design only (where it is, its size, angle, mirror, band, and the design itself,
+so deleting and swapping designs are undoable); body, skin and view settings are not, since
+undoing a skin-tone change while trying to put a design back would be surprising. A drag, pinch
+or handle grab is one step; other changes less than 0.6 s apart (a slider being dragged) merge.
+Switching body clears the history because placements are pinned to that body's mesh. The size
+label sits centred under the box's lowest point rather than along its axis, so it never overlaps
+a rotated design, and it shows the size actually applied (band mode uses the ring length).

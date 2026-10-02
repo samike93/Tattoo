@@ -84,8 +84,10 @@ export interface AppState {
   pencilMode: boolean;
   /** One-off message shown over the 3D view (auto-hides). */
   notice: string | null;
-  /** Last deleted design, for Undo. */
-  deleted: { design: DesignSource; widthIn: number; heightIn: number; rotationDeg: number } | null;
+  /** Undo / redo steps available (see history.ts). */
+  history: { undo: number; redo: number };
+  /** Last deleted design, for the "Design deleted" message. */
+  deleted: { name: string } | null;
   /** Import dialog: closed, open, or open with a file dropped onto the page. */
   importDialog: { open: boolean; file?: File; edit?: boolean };
   camera: { preset: CameraPreset; nonce: number };
@@ -108,7 +110,6 @@ export interface AppState {
   setTiming: (key: string, ms: number) => void;
   requestCamera: (preset: CameraPreset) => void;
   deleteDesign: () => void;
-  undoDelete: () => void;
 }
 
 export const DEFAULT_HEIGHTS: Record<BodyId, number> = { male: 1.78, female: 1.65 };
@@ -149,6 +150,7 @@ export const useApp = create<AppState>((set) => ({
   pencilMode: savedPencilMode(),
   notice: null,
   deleted: null,
+  history: { undo: 0, redo: 0 },
   camera: { preset: 'front', nonce: 0 },
   focus: null,
   focusOpposite: null,
@@ -169,13 +171,11 @@ export const useApp = create<AppState>((set) => ({
       s.design.kind === 'none'
         ? {}
         : {
-            deleted: { design: s.design, widthIn: s.widthIn, heightIn: s.heightIn, rotationDeg: s.rotationDeg },
+            deleted: { name: s.design.name },
             design: { kind: 'none', name: '', aspect: 1 },
             selected: false,
           },
     ),
-  undoDelete: () =>
-    set((s) => (s.deleted ? { ...s.deleted, deleted: null, selected: true } : {})),
 }));
 
 /** State that goes into a share link (everything except uploaded images and readouts). */

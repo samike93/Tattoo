@@ -7,6 +7,7 @@ import { LIMBS, type BodyId } from '../body/skeleton';
 import { formatSize, INCH } from '../projection/design';
 import { useShallow } from 'zustand/react/shallow';
 import { DEFAULT_HEIGHTS, useApp, type Method } from '../state';
+import { undo } from '../history';
 
 /** Body-shape controls (ids match tools/export_bodies.py LOCAL_CONTROLS). Neutral wording on purpose. */
 const SHAPE_CONTROLS: { id: string; label: string; less: string; more: string }[] = [
@@ -138,7 +139,7 @@ export function Panel() {
               ? 'No design on the body.'
               : 'PNG, JPG, SVG, PDF or Illustrator. You can also drop a file anywhere on the page.'}
         </p>
-        {s.design.kind === 'none' && s.deleted && <button onClick={() => s.undoDelete()}>Undo delete</button>}
+        {s.design.kind === 'none' && s.deleted && <button onClick={undo}>Undo delete</button>}
       </Section>
 
       <Section title="Placement">

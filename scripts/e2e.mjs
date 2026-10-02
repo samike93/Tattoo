@@ -106,6 +106,8 @@ try {
   await dragFrom(se, (se.x - center.x) * 0.5, (se.y - center.y) * 0.5);
   let z1 = await size();
   check('dragging a corner outwards enlarges the design proportionally', z1.w > z0.w * 1.3 && Math.abs(z1.w / z1.h - z0.w / z0.h) < 0.03, `${z0.w}x${z0.h} -> ${z1.w}x${z1.h}`);
+  const label = await page.locator('.box-size').textContent();
+  check('the size label under the box shows the new size in inches and cm', label?.includes(`${z1.w} × ${z1.h} in`) && label.includes(`${(z1.w * 2.54).toFixed(1)} ×`), JSON.stringify(label));
   // (Side handles that wrap round the far side of a limb are hidden; the top edge faces the camera.)
   const nh = await handle('h-n');
   await dragFrom(nh, -(nh.x - center.x) * 0.3, -(nh.y - center.y) * 0.3);
@@ -159,6 +161,25 @@ try {
   s = await state();
   const moved = Math.hypot(...s.focus.point.map((v, i) => v - before[i]));
   check('dragging the design moves it along the skin', moved > 0.02 && s.resolved.method === 'expmap', `moved ${(moved * 100).toFixed(1)} cm`);
+  // Undo / redo: the whole drag is one step.
+  const after = s.focus.point;
+  await page.keyboard.press('Control+z');
+  await settle(1000);
+  s = await state();
+  check('Ctrl+Z undoes the whole drag in one step', Math.hypot(...s.focus.point.map((v, i) => v - before[i])) < 0.002, `${(Math.hypot(...s.focus.point.map((v, i) => v - before[i])) * 1000).toFixed(1)} mm from the start`);
+  await page.keyboard.press('Control+Shift+z');
+  await settle(1000);
+  s = await state();
+  check('Shift+Ctrl+Z redoes it', Math.hypot(...s.focus.point.map((v, i) => v - after[i])) < 0.002);
+  const sz0 = await size();
+  await page.getByRole('button', { name: /^Undo \(/ }).click();
+  await settle(1000);
+  const sz1 = await size();
+  check('the Undo button steps back through earlier edits', sz1.w !== sz0.w || sz1.h !== sz0.h || sz1.r !== sz0.r || Math.hypot(...(await state()).focus.point.map((v, i) => v - after[i])) > 0.002, `${JSON.stringify(sz0)} -> ${JSON.stringify(sz1)}`);
+  await page.getByRole('button', { name: /^Redo \(/ }).click();
+  await settle(1000);
+  s = await state();
+  check('the Redo button restores it', Math.hypot(...s.focus.point.map((v, i) => v - after[i])) < 0.002 && (await size()).w === sz0.w);
 
   // Tap the back: surface wrap, no limb.
   await camera('back');

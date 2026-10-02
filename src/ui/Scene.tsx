@@ -33,6 +33,7 @@ import { createSkinMaterial, setCylinderUniforms, setDesignUniforms, setInkLook 
 import { drawChecker } from '../phase0/checker';
 import { limbSurfacePoint, shoulderBladePoint } from '../phase0/scenarios';
 import { expmapRadius } from '../phase0/study';
+import { beginGesture, endGesture } from '../history';
 import { useApp, type AppState, type CameraPreset, type Spot } from '../state';
 import { Exporter } from './Exporter';
 import { lastPointerType, trackPinch } from './input';
@@ -642,6 +643,7 @@ function Body({ body }: { body: LoadedBody }) {
     // A Pencil works anywhere on the skin: touching off the design brings the design to the tip.
     if (!grabbed && !pen) return;
     e.stopPropagation();
+    beginGesture(); // the whole drag (or pinch) is one undo step
     if (!grabbed) moveTo(h);
     const focus = st.focus;
     drag.current = { offset: grabbed && focus ? sub(focus.point, h.point) : [0, 0, 0], pointerId: e.pointerId };
@@ -675,6 +677,7 @@ function Body({ body }: { body: LoadedBody }) {
     if (!drag.current) return;
     drag.current.stopPinch?.();
     drag.current = null;
+    endGesture();
     if (controls) controls.enabled = true;
     document.body.style.cursor = '';
   };

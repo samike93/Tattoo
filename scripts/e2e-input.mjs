@@ -59,8 +59,13 @@ try {
   await settle();
   const s2 = await st();
   check('twisting two fingers clockwise turns the design clockwise', s2.r <= -35 && s2.r >= -55, `${s2.r}°`);
-  await page.evaluate(() => window.tattoo.set({ rotationDeg: 0 }));
+  // The whole two-finger gesture is one undo step (tap the Undo button, as on an iPad).
+  const undoBtn = await page.getByRole('button', { name: /^Undo \(/ }).boundingBox();
+  await touch('touchStart', [{ x: undoBtn.x + undoBtn.width / 2, y: undoBtn.y + undoBtn.height / 2 }]);
+  await touch('touchEnd', []);
   await settle();
+  const s2u = await st();
+  check('one tap on Undo reverses the whole twist', s2u.r === 0 && s2u.w === 3 && s2u.h === 4, `${s2u.w}x${s2u.h}, ${s2u.r}°`);
 
   // Apple Pencil: touching the skin away from the design brings the design to the tip.
   s = await st();

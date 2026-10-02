@@ -223,3 +223,14 @@ details.shape[open] > summary { margin-bottom: 4px; }
 .touch .box-handle.rotate, .touch .box-handle.trash { width: 40px; height: 40px; margin: -20px 0 0 -20px; }
 .touch .box-handle::after { inset: -14px; }
 .touch .slider input[type='range'] { height: 32px; }
+
+/* Undo / redo over the 3D view */
+.undo-bar { position: absolute; top: 12px; left: 12px; z-index: 4; display: flex; gap: 6px; }
+.undo-bar button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #ffffff33; background: #141418cc; color: #fff; display: grid; place-items: center; padding: 0; cursor: pointer; }
+.undo-bar button:disabled { opacity: 0.35; cursor: default; }
+.undo-bar svg { width: 20px; height: 20px; }
+.touch .undo-bar button { width: 46px; height: 46px; }
+
+/* Live size under the selection box */
+.box-size { position: fixed; top: 0; left: 0; visibility: hidden; pointer-events: none; white-space: pre; text-align: center; translate: -50% -50%; padding: 4px 9px; border-radius: 8px; background: #141418d9; color: #fff; font-size: 12px; line-height: 1.35; font-variant-numeric: tabular-nums; box-shadow: 0 1px 4px #00000059; }
+.touch .box-size { font-size: 13px; }

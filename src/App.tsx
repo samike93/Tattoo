@@ -7,6 +7,7 @@ import { ImportDialog } from './ui/ImportDialog';
 import { DesignBox } from './ui/DesignBox';
 import { installPenTracking, isIPad, isTouchDevice } from './ui/input';
 import { hashToState, stateToHash, useApp } from './state';
+import { installHistory, redo, undo } from './history';
 
 export function App() {
   const ui = useApp((s) => s.ui);
@@ -36,9 +37,13 @@ export function App() {
       if ((e.target as HTMLElement).closest(typing)) return;
       const st = useApp.getState();
       if (st.importDialog.open) return; // the dialog has its own keys
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+      const mod = e.metaKey || e.ctrlKey;
+      if (mod && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) {
         e.preventDefault();
-        st.undoDelete();
+        redo();
+      } else if (mod && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        undo();
       } else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         st.deleteDesign();
@@ -57,12 +62,14 @@ export function App() {
       useApp.getState().set({ importDialog: { open: true, file } });
     };
     const stopPen = installPenTracking();
+    const stopHistory = installHistory();
     if (isIPad()) document.documentElement.classList.add('ipad');
     if (isTouchDevice()) document.documentElement.classList.add('touch');
     window.addEventListener('dragover', onDragOver);
     window.addEventListener('drop', onDrop);
     return () => {
       stopPen();
+      stopHistory();
       window.removeEventListener('dragover', onDragOver);
       window.removeEventListener('drop', onDrop);
       window.removeEventListener('hashchange', apply);
@@ -89,6 +96,7 @@ export function App() {
         </ErrorBoundary>
         {status !== 'Ready' && <div className="status">{status}</div>}
         <DesignBox />
+        {status === 'Ready' && <UndoBar />}
         <DeletedToast />
         <Notice />
       </main>
@@ -115,6 +123,22 @@ function Notice() {
   );
 }
 
+/** Undo / redo buttons over the 3D view (an iPad has no keyboard for Ctrl+Z). */
+function UndoBar() {
+  const { undo: canUndo, redo: canRedo } = useApp((s) => s.history);
+  if (!canUndo && !canRedo) return null;
+  return (
+    <div className="undo-bar">
+      <button onClick={undo} disabled={!canUndo} aria-label="Undo (Ctrl/⌘+Z)" title="Undo (Ctrl/⌘+Z)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+      <button onClick={redo} disabled={!canRedo} aria-label="Redo (Shift+Ctrl/⌘+Z)" title="Redo (Shift+Ctrl/⌘+Z)">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 14 5-5-5-5M20 9H9.5a5.5 5.5 0 0 0 0 11H13" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+      </button>
+    </div>
+  );
+}
+
 function DeletedToast() {
   const deleted = useApp((s) => s.deleted);
   const none = useApp((s) => s.design.kind === 'none');
@@ -123,7 +147,7 @@ function DeletedToast() {
     <div className="toast" role="status">
       {deleted ? 'Design deleted.' : 'No design on the body.'}
       {deleted ? (
-        <button onClick={() => useApp.getState().undoDelete()}>Undo</button>
+        <button onClick={undo}>Undo</button>
       ) : (
         <button onClick={() => useApp.getState().set({ importDialog: { open: true } })}>Import</button>
       )}

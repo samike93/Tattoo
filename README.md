@@ -29,9 +29,11 @@ npm run dev          # http://localhost:5173
    closes all the way round.
 4. **Resize and rotate on the body**: tap the design to show its box. Drag a corner to resize
    (keeps proportions), a side dot to stretch one side, the round knob to rotate (Shift snaps to
-   15°). **Delete** or **Backspace** (or the bin button on iPad) removes the design; **Undo** or
-   Ctrl/⌘+Z brings it back; Escape or tapping off the body hides the box. Sliders in the panel
-   show the exact size in inches and centimetres.
+   15°). A label under the box shows the size in inches and centimetres (and the angle) as you
+   go. **Delete** or **Backspace** (or the bin button on iPad) removes the design; Escape or
+   tapping off the body hides the box.
+   **Undo / redo** (the arrows at the top left, Ctrl/⌘+Z and Shift+Ctrl/⌘+Z) step back through
+   moves, resizes, turns and deletes; a whole drag or pinch is one step.
 5. **iPad and Apple Pencil**: with fingers only, drag the design with one finger and pinch or twist
    it with two to resize and rotate; drag off the design to turn the view. The first Pencil touch
    switches on **Apple Pencil mode** (as in Procreate): the Pencil places, moves and resizes the
