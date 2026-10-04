@@ -253,3 +253,9 @@ details.shape[open] > summary { margin-bottom: 4px; }
 .photo-calib-form input { width: 80px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); }
 .photo-calib-form button { border: 0; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
 .mode-switch { margin: 10px 0 2px; }
+
+/* Import dialog: the buttons stay in view (iPad screens and the store's frame are short), and the
+   previews shrink to fit. */
+.modal-foot { position: sticky; bottom: -20px; margin: 0 -20px -20px; padding: 12px 20px 16px; background: var(--panel); z-index: 1; }
+.compare .checker { aspect-ratio: auto; height: min(36dvh, 380px); }
+.modal-foot .primary:disabled { opacity: 0.7; }

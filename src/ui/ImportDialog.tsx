@@ -162,6 +162,8 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
   const [opts, setOpts] = useState<BgOptions>({ ...DEFAULT_OPTIONS, ...initial });
   const [result, setResult] = useState<BgResult | null>(null);
   const [working, setWorking] = useState(false);
+  /** Preparing the full-resolution design after "Use design" (a few seconds for big files). */
+  const [finishing, setFinishing] = useState<'use' | 'download' | null>(null);
   const [error, setError] = useState('');
   const preview = useMemo(() => scaledCopy(original, PREVIEW_SIDE), [original]);
   const previewImage = useMemo(() => canvasToImage(preview), [preview]);
@@ -196,6 +198,9 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
   };
 
   const use = async (skip = false) => {
+    if (finishing) return; // already on it: repeated taps would restart the full-size run
+    setFinishing('use');
+    setError('');
     try {
       const canvas = skip ? original : await fullRes();
       const s = useApp.getState();
@@ -209,11 +214,15 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
       });
       onDone();
     } catch (e) {
-      if (!(e instanceof Superseded)) setError(String(e));
+      if (!(e instanceof Superseded)) setError(`Couldn’t prepare the design: ${(e as Error).message ?? e}. Try “Skip, use original”, or a smaller file.`);
+    } finally {
+      setFinishing(null);
     }
   };
 
   const download = async () => {
+    if (finishing) return;
+    setFinishing('download');
     try {
       const c = await fullRes();
       c.toBlob((b) => {
@@ -226,6 +235,8 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
       }, 'image/png');
     } catch (e) {
       if (!(e instanceof Superseded)) setError(String(e));
+    } finally {
+      setFinishing(null);
     }
   };
 
@@ -287,10 +298,10 @@ function Clean({ name, original, initial, onDone }: { name: string; original: HT
         </p>
       )}
       <footer className="modal-foot">
-        <button onClick={() => use(true)}>Skip, use original</button>
-        <button onClick={download}>Download PNG</button>
-        <button className="primary" onClick={() => use(false)} disabled={working && !result}>
-          Use design
+        <button onClick={() => use(true)} disabled={!!finishing}>Skip, use original</button>
+        <button onClick={download} disabled={!!finishing}>{finishing === 'download' ? 'Preparing…' : 'Download PNG'}</button>
+        <button className="primary" onClick={() => use(false)} disabled={(working && !result) || !!finishing} aria-busy={finishing === 'use'}>
+          {finishing === 'use' ? 'Preparing…' : 'Use design'}
         </button>
       </footer>
     </>

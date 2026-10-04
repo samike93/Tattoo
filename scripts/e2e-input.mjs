@@ -119,6 +119,22 @@ try {
   }
   const s7 = await st();
   check('the Pencil resizes the design with a corner handle', !!ne && !!sw && s7.w > s6.w * 1.5, `${s6.w}x${s6.h} -> ${s7.w}x${s7.h}`);
+  // Import a design on an iPad-sized screen: "Use design" must be on screen, and work with a tap.
+  const art = await page.evaluate(() => {
+    const c = document.createElement('canvas'); c.width = 800; c.height = 600;
+    const g = c.getContext('2d'); g.fillStyle = '#f4efe6'; g.fillRect(0, 0, 800, 600);
+    g.strokeStyle = '#111'; g.lineWidth = 8; g.beginPath(); g.arc(400, 300, 200, 0, 7); g.stroke();
+    return c.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByRole('button', { name: /Import/ }).first().click();
+  await page.locator('.modal input[type=file]').setInputFiles({ name: 'ipad-design.png', mimeType: 'image/png', buffer: Buffer.from(art, 'base64') });
+  await page.waitForSelector('.compare figure:nth-child(2) img', { timeout: 30000 });
+  const use = page.getByRole('button', { name: 'Use design' });
+  const ub = await use.boundingBox();
+  check('on an iPad screen the Use design button is visible without scrolling', !!ub && ub.y + ub.height <= 820, JSON.stringify(ub));
+  await use.tap();
+  await page.waitForSelector('.modal', { state: 'detached', timeout: 30000 }).catch(() => {});
+  check('tapping Use design places the design', (await page.evaluate(() => window.tattoo.get().design.name)) === 'ipad-design.png');
   check('no page errors', pageErrors.length === 0, pageErrors.slice(0, 2).join(' | '));
 } catch (e) {
   console.error(e);
